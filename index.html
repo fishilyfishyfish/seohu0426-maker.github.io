@@ -1,74 +1,338 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>더배틀 — The Battle</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOKU</title>
 <style>
-*{box-sizing:border-box}
-:root{--bg:#101216;--panel:#191c22;--line:#343944;--text:#f3f5f7;--muted:#aab0bb;--accent:#6ea8ff;--warn:#ff6b6b;--forbid:#ff4444}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif;min-height:100vh}
-header{padding:16px 18px 8px;text-align:center}
-h1{margin:0;font-size:28px}
-.sub{color:var(--muted);font-size:13px;margin-top:4px}
-.wrap{max-width:1050px;margin:auto;padding:10px}
-.layout{display:grid;grid-template-columns:minmax(300px,1fr) 300px;gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
-.boardBox{display:flex;justify-content:center;align-items:center;min-height:300px}
-canvas{width:min(92vw,700px);height:min(92vw,700px);max-width:700px;max-height:700px;touch-action:manipulation;display:block}
-.status{font-weight:700;font-size:17px;margin-bottom:8px}
-.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.stat{background:#11141a;border:1px solid var(--line);border-radius:12px;padding:9px}
-.stat b{display:block;font-size:18px}
-.stat span{font-size:12px;color:var(--muted)}
-button,select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:#222630;color:var(--text);font-size:14px;margin-top:7px}
-button{cursor:pointer}
-button:hover{filter:brightness(1.12)}
-.rules{font-size:13px;line-height:1.55;color:#d8dbe1}
-.rules b{color:#fff}
-.log{height:155px;overflow:auto;background:#11141a;border-radius:10px;border:1px solid var(--line);padding:8px;font-size:12px;line-height:1.5}
-.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
-.dot{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:-2px;margin-right:4px}
-.red{background:linear-gradient(135deg,#ff6666,#b30000);border:1px solid #800000}
-.blue{background:linear-gradient(135deg,#6699ff,#0033cc);border:1px solid #002299}
-.selectHint{color:var(--warn);font-weight:bold;animation:pulse 1s infinite}
-@keyframes pulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
-@media(max-width:760px){.layout{grid-template-columns:1fr}.card{padding:9px}header{padding-top:10px}h1{font-size:24px}}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #1a1a1a;
+    --surface: #222222;
+    --border: #333;
+    --red-stone: #c43d35;
+    --red-stone-hi: #e35a50;
+    --blue-stone: #2f5fa8;
+    --blue-stone-hi: #4f82d4;
+    --accent: #c8a96e;
+    --text: #d4d0c8;
+    --text-dim: #666;
+    --capture-glow: #e05c3a;
+    --win-glow: #6ec8a9;
+    --cell-size: 58px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 20px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
+
+  .turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    transition: border-color 0.2s;
+  }
+
+  .turn-indicator.black { border-color: #555; }
+  .turn-indicator.white { border-color: #999; }
+
+  .stone-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .stone-dot.black { background: var(--red-stone); border: 1px solid #7a2520; }
+  .stone-dot.white { background: var(--blue-stone); border: 1px solid #1e3d6e; }
+
+  .stone-dot.p1 { background: var(--red-stone); border: 2px solid #7a2520; }
+  .stone-dot.p2 { background: var(--blue-stone); border: 2px solid #1e3d6e; }
+
+  .msg {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    transition: color 0.2s;
+  }
+  .msg.alert { color: var(--capture-glow); }
+  .msg.win { color: var(--win-glow); }
+
+  /* Board */
+  .board-wrap {
+    overflow-x: auto;
+    padding: 8px;
+  }
+
+  #board {
+    position: relative;
+    display: inline-block;
+  }
+
+  svg.grid-svg {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+  }
+
+  .hex-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+    align-items: center;
+  }
+
+  .hex-row {
+    display: flex;
+    justify-content: center;
+    margin-top: calc(var(--cell-size) * -0.06);
+  }
+  .hex-row:first-child { margin-top: 0; }
+
+  .cell {
+    width: var(--cell-size);
+    height: calc(var(--cell-size) * 0.866);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .cell-inner {
+    width: calc(var(--cell-size) * 0.7);
+    height: calc(var(--cell-size) * 0.7);
+    border-radius: 50%;
+    border: 1px solid #3a3a3a;
+    background: var(--surface);
+    transition: background 0.1s, transform 0.1s, box-shadow 0.1s;
+    position: relative;
+    z-index: 2;
+  }
+
+  .cell:hover .cell-inner {
+    border-color: var(--accent);
+    transform: scale(1.12);
+  }
+
+  .cell.has-stone .cell-inner {
+    border: none;
+  }
+
+  .cell.p1 .cell-inner {
+    background: radial-gradient(circle at 35% 30%, var(--red-stone-hi), var(--red-stone) 70%);
+    border: 1px solid #7a2520;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  .cell.p2 .cell-inner {
+    background: radial-gradient(circle at 35% 30%, var(--blue-stone-hi), var(--blue-stone) 70%);
+    border: 1px solid #1e3d6e;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
+  }
+
+  .cell.capture-choice .cell-inner {
+    animation: glow-capture 1.4s ease-in-out infinite alternate;
+    cursor: pointer;
+  }
+
+  @keyframes glow-capture {
+    from { box-shadow: 0 0 3px 1px rgba(224,92,58,0.4); }
+    to   { box-shadow: 0 0 8px 2px rgba(224,92,58,0.9); }
+  }
+
+  .cell.win-stone .cell-inner {
+    box-shadow: 0 0 0 3px var(--win-glow);
+  }
+
+  .cell.blocked .cell-inner {
+    border-color: var(--capture-glow);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .cell.last-placed .cell-inner::after {
+    content: '';
+    position: absolute;
+    inset: 25%;
+    border-radius: 50%;
+    background: rgba(200,169,110,0.4);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 7px 18px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  button:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .overlay.show { display: flex; }
+
+  .overlay-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 32px 40px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 260px;
+  }
+
+  .overlay-box h2 {
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 0.2em;
+    color: var(--win-glow);
+  }
+
+  .overlay-box p {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+  }
+
+  .overlay-box button {
+    color: var(--text);
+    border-color: var(--accent);
+    padding: 9px 24px;
+  }
+  .overlay-box button:hover { color: var(--accent); }
+
+  .capture-overlay-box h2 { color: var(--capture-glow); }
+
+  /* Score */
+  .score-row {
+    display: flex;
+    gap: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .score-item { display: flex; gap: 8px; align-items: center; }
+  .score-item span:last-child { color: var(--text); font-size: 0.95rem; }
 </style>
 </head>
 <body>
-<header><h1>더배틀 · The Battle</h1>
-<div class="sub">샌드위치: 돌 놓은 것이 한 수 → 제거 후 무조건 상대 차례</div></header>
-<div class="wrap">
-<div class="layout">
-<section class="card">
-  <div class="status" id="status">내 차례입니다.</div>
-  <div class="boardBox"><canvas id="board"></canvas></div>
-  <div class="legend">
-    <span><i class="dot red"></i>붉은돌</span>
-    <span><i class="dot blue"></i>파란돌</span>
-    <span>● 마지막 수</span>
-    <span style="color:#ffcc00">◌ 제거 후보(클릭)</span>
-    <span style="color:var(--forbid)">◌ 배치 금지 자리</span>
-    <span style="color:#8844ff">◌ 샌드위치 영구 불가</span>
-    <span class="selectHint" id="selectHint" style="display:none;">👆 제거할 돌 하나를 클릭하세요! → 즉시 상대 차례입니다</span>
+
+<header>
+  <h1>BOKU</h1>
+  <span class="subtitle">로컬 2인 대전</span>
+</header>
+
+<div class="score-row">
+  <div class="score-item">
+    <div class="stone-dot p1"></div>
+    <span>홍</span>
+    <span id="score-p1">0</span>
   </div>
-</section>
-<aside class="card">
-  <div class="info">
-    <div class="stat"><b id="redCaps">0</b><span>붉은돌이 따낸 말</span></div>
-    <div class="stat"><b id="blueCaps">0</b><span>파란돌이 따낸 말</span></div>
-    <div class="stat"><b id="turnNo">0</b><span>수</span></div>
-    <div class="stat"><b id="aiLevel">강함</b><span>AI 난이도</span></div>
+  <div class="score-item">
+    <div class="stone-dot p2"></div>
+    <span>청</span>
+    <span id="score-p2">0</span>
   </div>
+</div>
+
+<div class="status-bar">
+  <div class="turn-indicator" id="turn-indicator">
+    <div class="stone-dot p1" id="turn-dot"></div>
+    <span id="turn-label">홍의 차례</span>
+  </div>
+  <span class="msg" id="msg"></span>
+</div>
+
+<div class="board-wrap">
+  <div id="board">
+    <div class="hex-grid" id="hex-grid"></div>
+  </div>
+</div>
+
+<div class="controls" style="flex-wrap:wrap;justify-content:center;">
+  <button id="btn-reset">새 게임</button>
+  <button id="btn-undo">한 수 무르기</button>
+  <button id="btn-reset-learn">AI 학습 데이터 초기화</button>
+</div>
+
+<div style="width:min(760px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-family:'DM Mono',monospace;font-size:.72rem;">
   <label>게임 모드
-    <select id="mode">
+    <select id="mode" style="width:100%;margin-top:4px;padding:7px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:2px;">
       <option value="ai">사람 vs AI</option>
       <option value="pvp">사람 vs 사람</option>
     </select>
   </label>
   <label>AI 난이도
-    <select id="difficulty">
+    <select id="difficulty" style="width:100%;margin-top:4px;padding:7px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:2px;">
       <option value="easy">약함</option>
       <option value="normal">보통</option>
       <option value="hard" selected>강함</option>
@@ -76,507 +340,544 @@ button:hover{filter:brightness(1.12)}
     </select>
   </label>
   <label>선공
-    <select id="side">
-      <option value="1">붉은돌 — 내가 선공</option>
-      <option value="2">파란돌 — AI가 선공</option>
+    <select id="side" style="width:100%;margin-top:4px;padding:7px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:2px;">
+      <option value="1">홍 — 내가 선공</option>
+      <option value="2">청 — AI가 선공</option>
     </select>
   </label>
-  <button id="newGame">새 게임</button>
-  <button id="undo">한 수 무르기</button>
-  <div class="rules">
-    <p><b>승리</b><br>가로·세로·대각선으로 자신의 말 5개 이상 연속 → 승리</p>
-    <p><b>샌드위치 규칙</b><br>
-    ✅ 내-적-적-내 → 가운데 2개 중 <b>하나 선택 제거</b><br>
-    ✅ <b>돌을 놓은 것 = 한 수</b> / 제거는 수가 아님<br>
-    ✅ <b>제거하자마자 무조건 상대 차례!</b> 내가 더 둘 수 없음<br>
-    ✅ 제거 자리는 <b>상대방 딱 한 차례</b>만 배치 금지<br>
-    ✅ 그 다음부터는 제거 자리에 놓을 수 있음<br>
-    ✅ 한번 샌드위치한 자리는 <b>영원히</b> 다시 샌드위치 불가</p>
+  <div style="padding:7px;border:1px solid var(--border);">
+    <div id="learnRecord">[내 기기] 0전 0승 0패</div>
+    <div id="learnBias" style="margin-top:4px;">공+0.00 / 수+0.00</div>
   </div>
-  <div class="log" id="log"></div>
-</aside>
 </div>
+
+<div id="rules-panel" style="width:min(760px,100%);font-size:.72rem;line-height:1.55;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;">
+  <b style="color:var(--text);">더배틀 규칙 적용</b><br>
+  가로·세로·대각선(이 BOKU 보드의 3축)으로 자신의 말 5개 이상 연속 → 승리<br>
+  내-적-적-내 → 가운데 2개 중 하나 선택 제거 / 돌을 놓은 것이 한 수이며 제거는 수가 아님<br>
+  제거하자마자 무조건 상대 차례 / 제거된 자리는 상대방 딱 한 차례만 배치 금지<br>
+  그 다음부터는 다시 배치 가능 / 한 번 샌드위치한 돌은 영원히 다시 샌드위치 불가<br>
+  사람 vs AI 대국 결과는 Firebase Realtime Database에 난이도별로 공유 학습됩니다.
+</div>
+
+<div id="game-log" style="width:min(760px,100%);height:120px;overflow:auto;background:var(--surface);border:1px solid var(--border);padding:8px;font-size:.68rem;line-height:1.5;color:var(--text-dim);"></div>
+
+<!-- Win overlay -->
+<div class="overlay" id="win-overlay">
+  <div class="overlay-box">
+    <h2 id="win-title">승리!</h2>
+    <p id="win-desc"></p>
+    <button id="win-reset">다시 하기</button>
+  </div>
 </div>
 
 <script>
 "use strict";
-const N=15, EMPTY=0, RED=1, BLUE=2;
-const canvas=document.getElementById("board"), ctx=canvas.getContext("2d");
-const statusEl=document.getElementById("status"), logEl=document.getElementById("log"), selectHint=document.getElementById("selectHint");
-const modeEl=document.getElementById("mode"), sideEl=document.getElementById("side"), diffEl=document.getElementById("difficulty");
 
-let board, turn, history, captures, lastMove, gameOver, aiThinking;
-let pendingRemoves=[], pendingOwner=null;
-let usedSandwich=new Set();
-let forbiddenUntilTurn={};
-const dirs=[[1,0],[0,1],[1,1],[1,-1]];
-const INF=1e14;
-const TT=new Map();
-const MAX_TT=50000;
+// --- BOKU board (기존 BOKU 판 그대로 유지) ---
+const WIDTHS = [5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5];
+const MID = 5;
+const CELLS = [];
+const cellSet = new Set();
+function key(q,z){return q+","+z;}
+for(let i=0;i<WIDTHS.length;i++){
+  const w=WIDTHS[i], z=i-MID, start=-(w-1);
+  for(let j=0;j<w;j++){
+    const q=start+2*j;
+    CELLS.push({q,z}); cellSet.add(key(q,z));
+  }
+}
+function exists(q,z){return cellSet.has(key(q,z));}
 
-const OPENINGS=[
-  [[7,7],[7,8],[8,7],[8,8]],
-  [[7,7],[6,7],[7,6],[6,6]],
-  [[7,7],[7,6],[6,7],[8,8]],
-  [[7,7],[8,7],[7,8],[6,6]],
-  [[7,7],[6,8],[8,6],[7,6]],
-  [[7,7],[8,6],[6,8],[8,7]],
-  [[7,7],[6,7],[8,8],[7,9]],
-  [[7,7],[7,8],[6,6],[9,7]]
+// BOKU의 3축: 가로 + 두 대각선
+const DIRS=[
+  {dq:2,dz:0},{dq:-2,dz:0},
+  {dq:1,dz:1},{dq:-1,dz:-1},
+  {dq:-1,dz:1},{dq:1,dz:-1}
 ];
+const AXES=[[DIRS[0],DIRS[1]],[DIRS[2],DIRS[3]],[DIRS[4],DIRS[5]]];
+const AXIS_POS=[{dq:2,dz:0},{dq:1,dz:1},{dq:-1,dz:1}];
 
+const FIREBASE_DB_URL="https://boku-d4eb3-default-rtdb.firebaseio.com";
+const LEARN_KEY="battle-ai-learn-v1";
+const LEARN_STEP=0.04, LEARN_MAX=0.6, MIN_MOVES_FOR_LEARNING=14;
 const DIFF={
   easy:{depthEarly:2,depthLate:1,cands:6,aggro:1.0,defense:1.0},
   normal:{depthEarly:3,depthLate:2,cands:8,aggro:1.2,defense:1.2},
   hard:{depthEarly:5,depthLate:4,cands:10,aggro:1.5,defense:1.5},
   master:{depthEarly:6,depthLate:5,cands:12,aggro:1.8,defense:1.8}
 };
-
 const PATTERN_SCORE={
   "5":10000000000,
-  "4,2":100000000, "4,1":30000000, "4,0":5000000,
-  "3,2":1500000, "3,1":300000, "3,0":60000,
-  "2,2":60000, "2,1":15000, "2,0":2000,
-  "1,2":1500, "1,1":500
+  "4,2":100000000,"4,1":30000000,"4,0":5000000,
+  "3,2":1500000,"3,1":300000,"3,0":60000,
+  "2,2":60000,"2,1":15000,"2,0":2000,
+  "1,2":1500,"1,1":500
 };
+const INF=1e14, MAX_TT=50000;
+const TT=new Map();
 
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function pickOpening(){return shuffle([...OPENINGS[Math.floor(Math.random()*OPENINGS.length)]])}
-function key(r,c){return r+","+c}
-function other(p){return p===RED?BLUE:RED}
-function inside(r,c){return r>=0&&r<N&&c>=0&&c<N}
-function cloneBoard(b){return b.map(row=>row.slice())}
-function centerDist(r,c){return Math.abs(r-7)+Math.abs(c-7)}
+let board=new Map(), currentPlayer=1, gameOver=false, captureMode=false;
+let captureCandidates=[], pendingGroups=[], lastPlaced=null, scores=[0,0];
+let blockedCell=null, history=[], usedSandwich=new Set(), aiThinking=false;
+let LEARN=null, learnReady=false, learnMode="firebase";
+
+const modeEl=document.getElementById("mode");
+const diffEl=document.getElementById("difficulty");
+const sideEl=document.getElementById("side");
+const logEl=document.getElementById("game-log");
+
+function other(p){return p===1?2:1;}
+function centerDist(q,z){return Math.abs(q)+Math.abs(z);}
+function countStones(b){return b.size;}
+function getStone(q,z,b=board){return b.get(key(q,z))||0;}
+function setStone(q,z,v,b=board){
+  const k=key(q,z);
+  if(v===0)b.delete(k);else b.set(k,v);
+}
+function cloneBoard(b){return new Map(b);}
 function turnNo(){return history.length+1;}
 
-function countLine(b,r,c,p,dr,dc){
-  let n=0,rr=r,cc=c;
-  while(inside(rr,cc)&&b[rr][cc]===p){n++;rr+=dr;cc+=dc}
-  rr=r-dr;cc=c-dc;
-  while(inside(rr,cc)&&b[rr][cc]===p){n++;rr-=dr;cc-=dc}
-  return n;
-}
-function wins(b,r,c,p){
-  return dirs.some(([dr,dc])=>countLine(b,r,c,p,dr,dc)>=5);
+function axial(q,z){return {a:(q+z)/2,b:z};}
+function hexDist(a,b){
+  const x=axial(a.q,a.z), y=axial(b.q,b.z);
+  return Math.max(Math.abs(x.a-y.a),Math.abs(x.b-y.b),Math.abs((x.a-x.b)-(y.a-y.b)));
 }
 
-function findCaptures(b,r,c,p){
-  const q=other(p), found=[];
-  for(const [dr,dc] of dirs){
-    const r1=r-dr, c1=c-dc;
-    const r2=r-2*dr, c2=c-2*dc;
-    const r3=r-3*dr, c3=c-3*dc;
-    if(inside(r3,c3) && inside(r2,c2) && inside(r1,c1)){
-      if(b[r3][c3]===p && b[r2][c2]===q && b[r1][c1]===q && b[r][c]===p){
-        if(!usedSandwich.has(key(r2,c2))) found.push([r2,c2]);
-        if(!usedSandwich.has(key(r1,c1))) found.push([r1,c1]);
+function snapshot(){
+  return {
+    board:cloneBoard(board),currentPlayer,captureMode,
+    captureCandidates:captureCandidates.slice(),
+    pendingGroups:pendingGroups.map(g=>g.slice()),
+    lastPlaced:lastPlaced?{...lastPlaced}:null,
+    blockedCell:blockedCell?{...blockedCell}:null,
+    scores:scores.slice(),usedSandwich:new Set(usedSandwich),
+    gameOver
+  };
+}
+function restoreSnapshot(s){
+  board=cloneBoard(s.board); currentPlayer=s.currentPlayer; captureMode=s.captureMode;
+  captureCandidates=s.captureCandidates.slice();
+  pendingGroups=(s.pendingGroups||[]).map(g=>g.slice());
+  lastPlaced=s.lastPlaced?{...s.lastPlaced}:null;
+  blockedCell=s.blockedCell?{...s.blockedCell}:null;
+  scores=s.scores?s.scores.slice():[0,0];
+  usedSandwich=new Set(s.usedSandwich||[]);
+  gameOver=!!s.gameOver; aiThinking=false;
+}
+
+function addLog(txt){
+  if(!logEl)return;
+  logEl.innerHTML+="▸ "+txt+"<br>";
+  logEl.scrollTop=logEl.scrollHeight;
+}
+
+function isForbiddenToPlace(q,z){
+  return blockedCell && blockedCell.q===q && blockedCell.z===z;
+}
+
+function checkWin(q,z,player,b=board){
+  for(const [d1,d2] of AXES){
+    const line=[{q,z}];
+    for(const d of [d1,d2]){
+      for(let i=1;i<5;i++){
+        const nq=q+d.dq*i,nz=z+d.dz*i;
+        if(!exists(nq,nz)||getStone(nq,nz,b)!==player)break;
+        line.push({q:nq,z:nz});
       }
     }
-    const r1b=r+dr, c1b=c+dc;
-    const r2b=r+2*dr, c2b=c+2*dc;
-    const r3b=r+3*dr, c3b=c+3*dc;
-    if(inside(r3b,c3b) && inside(r2b,c2b) && inside(r1b,c1b)){
-      if(b[r][c]===p && b[r1b][c1b]===q && b[r2b][c2b]===q && b[r3b][c3b]===p){
-        if(!usedSandwich.has(key(r1b,c1b))) found.push([r1b,c1b]);
-        if(!usedSandwich.has(key(r2b,c2b))) found.push([r2b,c2b]);
-      }
+    if(line.length>=5)return line;
+  }
+  return null;
+}
+
+// 더배틀의 "내-적-적-내" 규칙. 이미 샌드위치된 돌은 영구적으로 다시 제거 불가.
+function findCaptures(q,z,player,b=board){
+  const opp=other(player), groups=[];
+  for(const d of DIRS){
+    const a={q:q+d.dq,z:z+d.dz}, b2={q:q+d.dq*2,z:z+d.dz*2}, c={q:q+d.dq*3,z:z+d.dz*3};
+    if(exists(a.q,a.z)&&exists(b2.q,b2.z)&&exists(c.q,c.z) &&
+       getStone(a.q,a.z,b)===opp&&getStone(b2.q,b2.z,b)===opp&&getStone(c.q,c.z,b)===player){
+      const g=[];
+      if(!usedSandwich.has(key(a.q,a.z)))g.push(a);
+      if(!usedSandwich.has(key(b2.q,b2.z)))g.push(b2);
+      if(g.length)groups.push(g);
     }
   }
-  const uniq=[], seen=new Set();
-  for(const [rr,cc] of found){
-    const k=key(rr,cc);
-    if(!seen.has(k)){ seen.add(k); uniq.push([rr,cc]); }
+  const flat=[],seen=new Set();
+  for(const g of groups)for(const c of g){
+    const k=key(c.q,c.z);
+    if(!seen.has(k)){seen.add(k);flat.push(c);}
   }
-  return uniq;
+  return flat;
 }
 
-function applyMoveNoRemove(b,r,c,p){
-  const nb=cloneBoard(b);
-  nb[r][c]=p;
-  const caps=findCaptures(nb,r,c,p);
-  return {board:nb,caps};
+function applyMoveNoRemove(b,q,z,p){
+  const nb=cloneBoard(b); setStone(q,z,p,nb);
+  return {board:nb,caps:findCaptures(q,z,p,nb)};
 }
 
-function countStones(b){
-  let n=0;
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(b[r][c])n++;
-  return n;
-}
-
-function isForbiddenToPlace(r,c,who){
-  const k=key(r,c);
-  if(forbiddenUntilTurn[k]){
-    return turnNo() < forbiddenUntilTurn[k];
-  }
-  return false;
-}
-
-function legalMoves(b,blocked=new Set(),who=turn){
-  const stones=countStones(b);
-  if(!stones){
-    const opening=pickOpening();
-    return blocked.has("7,7")?[]:opening;
-  }
+function legalMoves(b=board){
+  if(!b.size)return CELLS.filter(c=>key(c.q,c.z)!=="0,0" || true);
   const set=new Set();
-  const radius=2;
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(b[r][c]){
-    for(let dr=-radius;dr<=radius;dr++)for(let dc=-radius;dc<=radius;dc++){
-      const rr=r+dr,cc=c+dc;
-      const k=key(rr,cc);
-      if(inside(rr,cc)&&!b[rr][cc]&&!blocked.has(k)&&!isForbiddenToPlace(rr,cc,who))set.add(k);
-    }
+  for(const s of CELLS)if(!getStone(s.q,s.z,b) && !(blockedCell&&blockedCell.q===s.q&&blockedCell.z===s.z)){
+    let near=false;
+    for(const o of CELLS)if(getStone(o.q,o.z,b) && hexDist(s,o)<=2){near=true;break;}
+    if(near)set.add(key(s.q,s.z));
   }
-  return [...set].map(k=>k.split(",").map(Number));
+  return [...set].map(k=>{const [q,z]=k.split(",").map(Number);return {q,z};});
 }
 
 function prioritySortMoves(moves,me,b){
   const turnCount=history.length+1;
   if(turnCount>12)return moves;
-  const myStones=[];
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(b[r][c]===me)myStones.push([r,c]);
-  return moves.slice().sort((a,b)=>{
-    const [ra,ca]=a,[rb,cb]=b;
-    const inA=ra>=4&&ra<=10&&ca>=4&&ca<=10;
-    const inB=rb>=4&&rb<=10&&cb>=4&&cb<=10;
-    if(inA&&!inB)return -1;
-    if(!inA&&inB)return 1;
-    if(myStones.length){
-      const dA=Math.min(...myStones.map(([rr,cc])=>Math.abs(ra-rr)+Math.abs(ca-cc)));
-      const dB=Math.min(...myStones.map(([rr,cc])=>Math.abs(rb-rr)+Math.abs(cb-cc)));
-      if(dA<=3&&dB>3)return -1;
-      if(dA>3&&dB<=3)return 1;
-      if(dA!==dB)return dA-dB;
-    }
-    return centerDist(ra,ca)-centerDist(rb,cb);
+  return moves.slice().sort((A,B)=>{
+    const a=(Math.abs(A.q)+Math.abs(A.z)), bb=(Math.abs(B.q)+Math.abs(B.z));
+    return a-bb;
   });
 }
 
-function boardKey(b){let s="";for(let r=0;r<N;r++)s+=b[r].join("");return s}
 function patternScore(len,open){
   if(len>=5)return PATTERN_SCORE["5"];
   return PATTERN_SCORE[`${len},${open}`]||0;
 }
 
 function evaluate(b,me,capMe=0,capOpp=0){
-  const cfg=DIFF[diffEl.value];
-  const aggro=cfg.aggro, def=cfg.defense;
-  const opp=other(me);let score=0;
+  const cfg=effectiveCfg(), aggro=cfg.aggro, def=cfg.defense, opp=other(me);
+  let score=0;
   for(const p of [me,opp]){
     const sign=p===me?aggro:-def;
-    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
-      if(b[r][c]!==p)continue;
-      for(const [dr,dc] of dirs){
-        const pr=r-dr,pc=c-dc;
-        if(inside(pr,pc)&&b[pr][pc]===p)continue;
-        let len=0,rr=r,cc=c;
-        while(inside(rr,cc)&&b[rr][cc]===p){len++;rr+=dr;cc+=dc}
-        const open=(inside(pr,pc)&&b[pr][pc]===EMPTY?1:0)+(inside(rr,cc)&&b[rr][cc]===EMPTY?1:0);
+    for(const start of CELLS){
+      if(getStone(start.q,start.z,b)!==p)continue;
+      for(const d of AXIS_POS){
+        const pr=start.q-d.dq, pz=start.z-d.dz;
+        if(exists(pr,pz)&&getStone(pr,pz,b)===p)continue;
+        let len=0,q=start.q,z=start.z;
+        while(exists(q,z)&&getStone(q,z,b)===p){len++;q+=d.dq;z+=d.dz;}
+        const open=(exists(pr,pz)&&getStone(pr,pz,b)===0?1:0)+(exists(q,z)&&getStone(q,z,b)===0?1:0);
         score+=sign*patternScore(len,open);
       }
     }
   }
-  score += (capMe-capOpp)*50000;
+  score+=(capMe-capOpp)*50000;
   return score;
 }
 
 function terminalScore(b,me,ply){
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
-    if(b[r][c]&&wins(b,r,c,b[r][c]))
-      return b[r][c]===me ? 10000000000-ply : -10000000000+ply;
+  for(const c of CELLS){
+    const p=getStone(c.q,c.z,b);
+    if(p&&checkWin(c.q,c.z,p,b))return p===me?10000000000-ply:-10000000000+ply;
   }
   return null;
+}
+
+function boardKey(b){
+  return CELLS.map(c=>getStone(c.q,c.z,b)).join("");
 }
 
 function minimax(b,depth,alpha,beta,me,player,ply,capMe,capOpp){
   const term=terminalScore(b,me,ply);
   if(term!==null)return term;
   if(depth<=0)return evaluate(b,me,capMe,capOpp);
-  const keyStr=boardKey(b)+"|"+player+"|"+depth+"|"+capMe+"|"+capOpp;
-  const cached=TT.get(keyStr);if(cached!==undefined)return cached;
+  const k=boardKey(b)+"|"+player+"|"+depth+"|"+capMe+"|"+capOpp;
+  const cached=TT.get(k);if(cached!==undefined)return cached;
+  let moves=prioritySortMoves(legalMoves(b),player,b);
   const cfg=DIFF[diffEl.value];
-  let moves=prioritySortMoves(legalMoves(b,new Set(),player),player,b);
   if(!moves.length)return evaluate(b,me,capMe,capOpp);
   let best=player===me?-INF:INF;
-  for(const [r,c] of moves.slice(0,cfg.cands)){
-    const res=applyMoveNoRemove(b,r,c,player);
-    const addCap=res.caps.length>0?1:0;
-    const nM=capMe+(player===me?addCap:0);
-    const nO=capOpp+(player!==me?addCap:0);
+  for(const m of moves.slice(0,cfg.cands)){
+    const res=applyMoveNoRemove(b,m.q,m.z,player);
+    const addCap=res.caps.length?1:0;
+    const nM=capMe+(player===me?addCap:0), nO=capOpp+(player!==me?addCap:0);
     const v=minimax(res.board,depth-1,alpha,beta,me,other(player),ply+1,nM,nO);
     if(player===me){if(v>best)best=v;if(best>alpha)alpha=best;}
     else{if(v<best)best=v;if(best<beta)beta=best;}
     if(beta<=alpha)break;
   }
   if(TT.size>MAX_TT)TT.delete(TT.keys().next().value);
-  TT.set(keyStr,best);return best;
+  TT.set(k,best);return best;
+}
+
+function findOpenThrees(b,p){
+  const threats=[],seen=new Set();
+  for(const start of CELLS){
+    if(getStone(start.q,start.z,b)!==p)continue;
+    for(const d of AXIS_POS){
+      const pr=start.q-d.dq,pz=start.z-d.dz;
+      if(exists(pr,pz)&&getStone(pr,pz,b)===p)continue;
+      let len=0,q=start.q,z=start.z;
+      while(exists(q,z)&&getStone(q,z,b)===p){len++;q+=d.dq;z+=d.dz;}
+      if(len!==3)continue;
+      const before={q:pr,z:pz},after={q,z};
+      if(!(exists(before.q,before.z)&&getStone(before.q,before.z,b)===0))continue;
+      if(!(exists(after.q,after.z)&&getStone(after.q,after.z,b)===0))continue;
+      const k=[key(start.q,start.z),key(start.q+d.dq,start.z+d.dz),key(start.q+2*d.dq,start.z+2*d.dz)].sort().join("|");
+      if(!seen.has(k)){seen.add(k);threats.push({flanks:[before,after]});}
+    }
+  }
+  return threats;
 }
 
 function chooseAIRemove(candidates,me){
-  const opp=other(me);
-  let best=null, bestScore=-Infinity;
-  for(const [r,c] of candidates){
+  const opp=other(me);let best=null,bestScore=-Infinity;
+  for(const c of candidates){
     let score=0;
-    for(const [dr,dc] of dirs){
-      if(inside(r-dr,c-dc)&&board[r-dr][c-dc]===opp)score+=2;
-      if(inside(r+dr,c+dc)&&board[r+dr][c+dc]===opp)score+=2;
+    for(const d of DIRS){
+      if(exists(c.q-d.dq,c.z-d.dz)&&getStone(c.q-d.dq,c.z-d.dz)===opp)score+=2;
+      if(exists(c.q+d.dq,c.z+d.dz)&&getStone(c.q+d.dq,c.z+d.dz)===opp)score+=2;
     }
-    score += (14 - centerDist(r,c));
-    if(score>bestScore){bestScore=score;best=[r,c];}
+    score+=14-centerDist(c.q,c.z);
+    if(score>bestScore){bestScore=score;best=c;}
   }
   return best||candidates[0];
 }
 
 function chooseAI(b,me){
-  let moves=prioritySortMoves(legalMoves(b,new Set(),me),me,b);
-  if(moves.length===1)return moves[0];
-  for(const [r,c] of moves){const nb=cloneBoard(b);nb[r][c]=me;if(wins(nb,r,c,me))return [r,c];}
+  let moves=prioritySortMoves(legalMoves(b),me,b);
+  if(!moves.length)return null;
+  for(const m of moves){const nb=cloneBoard(b);setStone(m.q,m.z,me,nb);if(checkWin(m.q,m.z,me,nb))return m;}
   const opp=other(me);
-  for(const [r,c] of moves){const nb=cloneBoard(b);nb[r][c]=opp;if(wins(nb,r,c,opp))return [r,c];}
-  let bestSand=null, maxSand=0;
-  for(const [r,c] of moves){
-    const res=applyMoveNoRemove(b,r,c,me);
-    if(res.caps.length>maxSand){maxSand=res.caps.length;bestSand=[r,c];}
-  }
-  if(bestSand&&maxSand>0)return bestSand;
-
-  const turnCount=history.length+1;
-  const cfg=DIFF[diffEl.value];
+  for(const m of moves){const nb=cloneBoard(b);setStone(m.q,m.z,opp,nb);if(checkWin(m.q,m.z,opp,nb))return m;}
+  const threats=findOpenThrees(b,opp), moveSet=new Set(moves.map(m=>key(m.q,m.z)));
+  for(const t of threats)for(const f of t.flanks)if(moveSet.has(key(f.q,f.z)))return f;
+  let bestSand=null,maxSand=0;
+  for(const m of moves){const res=applyMoveNoRemove(b,m.q,m.z,me);if(res.caps.length>maxSand){maxSand=res.caps.length;bestSand=m;}}
+  if(bestSand)return bestSand;
+  const turnCount=history.length+1,cfg=DIFF[diffEl.value];
   const depth=turnCount<=15?cfg.depthEarly:cfg.depthLate;
   let best=moves[0],bestVal=-INF;TT.clear();
-  for(const [r,c] of moves.slice(0,cfg.cands)){
-    const res=applyMoveNoRemove(b,r,c,me);
+  for(const m of moves.slice(0,cfg.cands)){
+    const res=applyMoveNoRemove(b,m.q,m.z,me);
     const v=minimax(res.board,depth-1,-INF,INF,me,opp,1,res.caps.length,0);
-    if(v>bestVal){bestVal=v;best=[r,c];}
+    if(v>bestVal){bestVal=v;best=m;}
   }
   return best;
 }
 
-function endTurn(nextTurn){
-  turn=nextTurn;
-  if(!gameOver&&modeEl.value==="ai"&&turn===other(Number(sideEl.value))){
-    aiThinking=true;updateUI();setTimeout(aiMove,5);
-  }
+function effectiveCfg(){
+  const base=DIFF[diffEl.value];
+  if(!learnReady||!LEARN)return base;
+  const L=LEARN[diffEl.value];
+  return {...base,
+    aggro:Math.max(.5,Math.min(2.6,base.aggro+L.aggroAdj)),
+    defense:Math.max(.5,Math.min(2.9,base.defense+L.defenseAdj))
+  };
 }
 
-function addLog(txt){logEl.innerHTML+="▸ "+txt+"<br>";logEl.scrollTop=logEl.scrollHeight}
+async function storageGet(key){
+  try{
+    const r=await fetch(`${FIREBASE_DB_URL}/${encodeURIComponent(key)}.json`);
+    if(r.ok){const data=await r.json();learnMode="firebase";return data;}
+  }catch(e){}
+  learnMode="local";
+  try{const v=localStorage.getItem(key);return v?JSON.parse(v):null;}catch(e){return null;}
+}
+async function storageSet(key,value){
+  try{
+    const r=await fetch(`${FIREBASE_DB_URL}/${encodeURIComponent(key)}.json`,{
+      method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(value)
+    });
+    if(r.ok){learnMode="firebase";return true;}
+  }catch(e){}
+  learnMode="local";
+  try{localStorage.setItem(key,JSON.stringify(value));}catch(e){}
+  return false;
+}
+function defaultLearn(){
+  const L={};for(const k of Object.keys(DIFF))L[k]={aggroAdj:0,defenseAdj:0,games:0,wins:0,losses:0};return L;
+}
+async function loadLearn(){
+  const data=await storageGet(LEARN_KEY);
+  LEARN=data||defaultLearn();
+  for(const k of Object.keys(DIFF))if(!LEARN[k])LEARN[k]={aggroAdj:0,defenseAdj:0,games:0,wins:0,losses:0};
+  learnReady=true;updateLearnUI();
+}
+async function saveLearn(){await storageSet(LEARN_KEY,LEARN);}
+function updateLearnUI(){
+  const rec=document.getElementById("learnRecord"),bias=document.getElementById("learnBias");
+  if(!rec||!bias)return;
+  if(!learnReady||!LEARN){rec.textContent="불러오는 중…";bias.textContent="—";return;}
+  const L=LEARN[diffEl.value],tag=learnMode==="firebase"?"[웹 공유]":"[내 기기]";
+  rec.textContent=`${tag} ${L.games}전 ${L.wins}승 ${L.losses}패`;
+  bias.textContent=`공${L.aggroAdj>=0?"+":""}${L.aggroAdj.toFixed(2)} / 수${L.defenseAdj>=0?"+":""}${L.defenseAdj.toFixed(2)}`;
+}
 
-function placeStone(r,c,p,isAI=false){
-  history.push({
-    board:cloneBoard(board),turn,captures:{...captures},lastMove,
-    forbiddenUntilTurn:{...forbiddenUntilTurn},
-    usedSandwich:new Set(usedSandwich)
-  });
-
-  board[r][c]=p;
-  lastMove=[r,c];
-  const caps=findCaptures(board,r,c,p);
-
-  if(wins(board,r,c,p)){
-    gameOver=true;
-    addLog(`${p===RED?"붉은돌":"파란돌"} 승리!`);
-    draw();updateUI();
-  }else if(caps.length>0){
-    pendingRemoves=caps;
-    pendingOwner=p;
-    addLog(`샌드위치! ${caps.length}개 중 하나 제거하세요.`);
-    if(isAI){
-      setTimeout(()=>{
-        const choice=chooseAIRemove(pendingRemoves,p);
-        if(choice)executeRemove(choice[0],choice[1]);
-      },600);
-    }else{
-      selectHint.style.display="block";
+function detectMissedBlock(winner){
+  const loser=other(winner);
+  for(let i=0;i<history.length;i++){
+    const snap=history[i];
+    if(snap.currentPlayer!==loser)continue;
+    const nextBoard=i+1<history.length?history[i+1].board:board;
+    let moveCell=null;
+    for(const c of CELLS){
+      if(!getStone(c.q,c.z,snap.board)&&getStone(c.q,c.z,nextBoard)===loser){moveCell=c;break;}
     }
-    draw();updateUI();
-  }else{
-    endTurn(other(p));
-    draw();updateUI();
+    if(!moveCell)continue;
+    const threats=findOpenThrees(snap.board,winner);
+    if(threats.length){
+      const blocked=threats.some(t=>t.flanks.some(f=>f.q===moveCell.q&&f.z===moveCell.z));
+      if(!blocked)return true;
+    }
   }
+  return false;
+}
+async function recordGameResult(winner,movesPlayed){
+  if(modeEl.value!=="ai"||!learnReady||!LEARN)return;
+  if(movesPlayed<MIN_MOVES_FOR_LEARNING){addLog(`판이 너무 짧게(${movesPlayed}수) 끝나 학습에는 반영하지 않았습니다.`);return;}
+  if(detectMissedBlock(winner)){addLog("진 쪽이 열린 3을 막지 않은 순간이 있어 학습에는 반영하지 않았습니다.");return;}
+  const human=Number(sideEl.value),ai=other(human),L=LEARN[diffEl.value];
+  L.games++;
+  if(winner===ai){
+    L.wins++;L.aggroAdj=Math.min(LEARN_MAX,L.aggroAdj+LEARN_STEP*.5);
+    L.defenseAdj=Math.max(-LEARN_MAX,L.defenseAdj-LEARN_STEP*.25);
+  }else if(winner===human){
+    L.losses++;L.defenseAdj=Math.min(LEARN_MAX,L.defenseAdj+LEARN_STEP);
+    L.aggroAdj=Math.max(-LEARN_MAX,L.aggroAdj-LEARN_STEP*.3);
+  }
+  await saveLearn();updateLearnUI();
 }
 
-function executeRemove(r,c){
-  const k=key(r,c);
-  const remover=pendingOwner;
-
-  board[r][c]=EMPTY;
-  captures[remover]+=1;
-  usedSandwich.add(k);
-  forbiddenUntilTurn[k]=turnNo()+1;
-
-  addLog(`말 제거 → 상대방 차례입니다.`);
-
-  pendingRemoves=[];
-  pendingOwner=null;
-  selectHint.style.display="none";
-
-  endTurn(other(remover));
-
-  draw();updateUI();
+function render(){
+  document.querySelectorAll("#hex-grid .cell").forEach(cell=>{
+    const q=+cell.dataset.q,z=+cell.dataset.z;
+    cell.className="cell";
+    const v=getStone(q,z);
+    if(v===1)cell.classList.add("has-stone","p1");
+    if(v===2)cell.classList.add("has-stone","p2");
+    if(lastPlaced&&lastPlaced.q===q&&lastPlaced.z===z)cell.classList.add("last-placed");
+    if(captureMode&&captureCandidates.some(c=>c.q===q&&c.z===z))cell.classList.add("capture-choice");
+    if(isForbiddenToPlace(q,z))cell.classList.add("blocked");
+  });
+  document.getElementById("score-p1").textContent=scores[0];
+  document.getElementById("score-p2").textContent=scores[1];
 }
 
-function tryRemove(r,c){
-  const idx=pendingRemoves.findIndex(([rr,cc])=>rr===r&&cc===c);
-  if(idx===-1)return false;
-  executeRemove(r,c);
-  return true;
+function highlightWin(cells){
+  document.querySelectorAll("#hex-grid .cell").forEach(el=>{
+    const q=+el.dataset.q,z=+el.dataset.z;
+    if(cells.some(c=>c.q===q&&c.z===z))el.classList.add("win-stone");
+  });
+}
+function updateStatus(){
+  const dot=document.getElementById("turn-dot"),label=document.getElementById("turn-label"),indicator=document.getElementById("turn-indicator");
+  const msg=document.getElementById("msg");
+  dot.className="stone-dot "+(currentPlayer===1?"p1":"p2");
+  label.textContent=currentPlayer===1?"홍의 차례":"청의 차례";
+  indicator.className="turn-indicator "+(currentPlayer===1?"black":"white");
+  if(gameOver){msg.textContent="게임 종료";msg.className="msg win";}
+  else if(captureMode&&captureCandidates.length){msg.textContent=`제거할 돌 ${captureCandidates.length}개 중 하나를 클릭하세요!`;msg.className="msg alert";}
+  else if(aiThinking){msg.textContent="AI 생각 중…";msg.className="msg";}
+  else if(modeEl.value==="ai")msg.textContent=currentPlayer===Number(sideEl.value)?"내 차례":"AI 차례";
+  else msg.textContent="";
 }
 
-function play(r,c){
+function executeRemove(q,z){
+  if(!captureMode||!captureCandidates.some(c=>c.q===q&&c.z===z))return;
+  setStone(q,z,0);scores[currentPlayer-1]++;
+  usedSandwich.add(key(q,z));blockedCell={q,z};
+  captureMode=false;captureCandidates=[];
+  addLog("말 제거 → 상대방 차례입니다.");
+  currentPlayer=other(currentPlayer);
+  render();updateStatus();
+  if(modeEl.value==="ai"&&currentPlayer!==Number(sideEl.value))setTimeout(aiMove,30);
+}
+
+function placeStone(q,z,p,isAI=false){
+  history.push(snapshot());
+  blockedCell=null;setStone(q,z,p);lastPlaced={q,z};
+  const win=checkWin(q,z,p);
+  if(win){
+    gameOver=true;scores[p-1]++;render();highlightWin(win);
+    addLog(`${p===1?"홍":"청"} 승리!`);updateStatus();
+    recordGameResult(p,history.length);
+    return;
+  }
+  const caps=findCaptures(q,z,p);
+  if(caps.length){
+    captureCandidates=caps;captureMode=true;
+    addLog(`샌드위치! ${caps.length}개 중 하나를 제거하세요.`);
+    render();updateStatus();
+    if(isAI)setTimeout(()=>{const ch=chooseAIRemove(captureCandidates,p);if(ch)executeRemove(ch.q,ch.z);},450);
+    return;
+  }
+  currentPlayer=other(p);render();updateStatus();
+  if(modeEl.value==="ai"&&currentPlayer!==Number(sideEl.value))setTimeout(aiMove,30);
+}
+
+function play(q,z){
   if(gameOver||aiThinking)return;
-  if(pendingRemoves.length>0){
-    if(pendingOwner!==turn)return;
-    if(tryRemove(r,c))return;
-    else { alert("노란 테두리 안에 있는 돌을 클릭해주세요!"); return; }
+  if(captureMode){
+    if(currentPlayer!==Number(sideEl.value)&&modeEl.value==="ai")return;
+    if(captureCandidates.some(c=>c.q===q&&c.z===z))executeRemove(q,z);
+    else alert("제거 후보로 표시된 돌을 클릭해주세요!");
+    return;
   }
-  if(modeEl.value==="ai"){const human=Number(sideEl.value);if(turn!==human)return;}
-  const k=key(r,c);
-  if(board[r][c]!==EMPTY){alert("이미 돌이 놓인 자리입니다.");return;}
-  if(isForbiddenToPlace(r,c,turn)){alert("배치 금지 자리입니다. 다음 차례부터 놓을 수 있습니다.");return;}
-  placeStone(r,c,turn,false);
+  if(modeEl.value==="ai"&&currentPlayer!==Number(sideEl.value))return;
+  if(getStone(q,z)!==0){alert("이미 돌이 놓인 자리입니다.");return;}
+  if(isForbiddenToPlace(q,z)){alert("배치 금지 자리입니다. 다음 차례부터 놓을 수 있습니다.");return;}
+  placeStone(q,z,currentPlayer,false);
 }
 
 function aiMove(){
-  if(gameOver||modeEl.value!=="ai"||pendingRemoves.length)return;
-  const ai=Number(sideEl.value)===RED?BLUE:RED;
-  if(turn!==ai){aiThinking=false;return;}
+  if(gameOver||modeEl.value!=="ai"||captureMode)return;
+  const ai=other(Number(sideEl.value));
+  if(currentPlayer!==ai)return;
+  aiThinking=true;updateStatus();
   setTimeout(()=>{
-    if(gameOver||turn!==ai||pendingRemoves.length){aiThinking=false;return;}
-    const choice=chooseAI(board,ai);
-    if(!choice){aiThinking=false;return;}
-    const [r,c]=choice;aiThinking=false;
-    placeStone(r,c,ai,true);
-  },3);
+    if(gameOver||currentPlayer!==ai||captureMode){aiThinking=false;updateStatus();return;}
+    const choice=chooseAI(board,ai);aiThinking=false;
+    if(choice)placeStone(choice.q,choice.z,ai,true);else updateStatus();
+  },30);
 }
 
 function newGame(){
-  board=Array.from({length:N},()=>Array(N).fill(EMPTY));
-  turn=RED; history=[]; captures={[RED]:0,[BLUE]:0};
-  lastMove=null; gameOver=false; aiThinking=false;
-  pendingRemoves=[]; pendingOwner=null;
-  usedSandwich.clear(); forbiddenUntilTurn={};
-  TT.clear(); logEl.innerHTML="";
+  board=new Map();currentPlayer=1;gameOver=false;captureMode=false;
+  captureCandidates=[];pendingGroups=[];lastPlaced=null;blockedCell=null;
+  history=[];usedSandwich=new Set();aiThinking=false;TT.clear();logEl.innerHTML="";
   addLog("게임 시작");
-  document.getElementById("aiLevel").textContent={easy:"약함",normal:"보통",hard:"강함",master:"최강"}[diffEl.value];
-  selectHint.style.display="none";
-  draw(); updateUI();
-  if(modeEl.value==="ai" && Number(sideEl.value)===2) setTimeout(aiMove,30);
+  render();updateStatus();updateLearnUI();
+  if(modeEl.value==="ai"&&Number(sideEl.value)===2)setTimeout(aiMove,100);
 }
 
 function undo(){
-  if(!history.length||aiThinking||pendingRemoves.length)return;
-  let n=1;
-  if(modeEl.value==="ai"&&history.length>=2)n=2;
-  while(n--&&history.length){
-    const h=history.pop();
-    board=h.board;turn=h.turn;captures=h.captures;lastMove=h.lastMove;
-    forbiddenUntilTurn=h.forbiddenUntilTurn?{...h.forbiddenUntilTurn}:{};
-    usedSandwich=new Set(h.usedSandwich||[]);
-  }
-  TT.clear();gameOver=false;pendingRemoves=[];pendingOwner=null;selectHint.style.display="none";
-  draw();updateUI();addLog("한 수 무름");
+  if(gameOver||aiThinking||captureMode||!history.length)return;
+  let n=modeEl.value==="ai"&&history.length>=2?2:1;
+  while(n--&&history.length)restoreSnapshot(history.pop());
+  TT.clear();render();updateStatus();addLog("한 수 무름");
 }
 
-function updateUI(){
-  document.getElementById("redCaps").textContent=captures[RED];
-  document.getElementById("blueCaps").textContent=captures[BLUE];
-  document.getElementById("turnNo").textContent=history.length;
-  if(gameOver)statusEl.textContent="게임 종료";
-  else if(pendingRemoves.length>0&&pendingOwner===turn)statusEl.textContent=`제거할 돌 ${pendingRemoves.length}개 중 하나를 클릭하세요!`;
-  else if(pendingRemoves.length>0)statusEl.textContent="AI가 제거 중…";
-  else if(aiThinking)statusEl.textContent="AI 생각 중…";
-  else if(modeEl.value==="ai"){
-    const human=Number(sideEl.value);
-    statusEl.textContent=turn===human?"내 차례입니다.":"AI 차례입니다.";
-  }else statusEl.textContent=`${turn===RED?"붉은돌":"파란돌"} 차례입니다.`;
+async function resetLearnData(){
+  if(!confirm("모든 난이도의 AI 학습 데이터를 초기화할까요? 이 보드를 쓰는 모든 사람에게 적용됩니다."))return;
+  LEARN=defaultLearn();await saveLearn();updateLearnUI();addLog("AI 학습 데이터 초기화됨");
 }
 
-function resizeCanvas(){
-  const dpr=Math.min(devicePixelRatio||1.5,2);
-  const css=Math.min(canvas.parentElement.clientWidth-2,700);
-  canvas.style.width=css+"px";canvas.style.height=css+"px";
-  canvas.width=Math.floor(css*dpr);canvas.height=Math.floor(css*dpr);
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  draw(css);
-}
-
-function draw(forced){
-  if(!board)return;
-  const css=forced||parseFloat(canvas.style.width)||Math.min(canvas.parentElement.clientWidth-2,700);
-  const pad=Math.max(18,css*0.065), span=(css-2*pad)/(N-1);
-  ctx.clearRect(0,0,css,css);
-  ctx.fillStyle="#d6ad70";ctx.fillRect(0,0,css,css);
-  ctx.strokeStyle="#775c3d";ctx.lineWidth=1;
-  for(let i=0;i<N;i++){
-    const x=pad+i*span;
-    ctx.beginPath();ctx.moveTo(pad,x);ctx.lineTo(css-pad,x);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x,pad);ctx.lineTo(x,css-pad);ctx.stroke();
-  }
-  const stars=[[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
-  ctx.fillStyle="#5d472f";
-  for(const [r,c] of stars){ctx.beginPath();ctx.arc(pad+c*span,pad+r*span,3.2,0,Math.PI*2);ctx.fill()}
-
-  ctx.lineWidth=2;
-  ctx.setLineDash([5,4]);
-  const now=turnNo();
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
-    const k=key(r,c);
-    if(forbiddenUntilTurn[k] && now < forbiddenUntilTurn[k]){
-      ctx.strokeStyle="#ff4444";
-      const x=pad+c*span,y=pad+r*span,rad=span*.42;
-      ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.stroke();
-    }else if(usedSandwich.has(k)){
-      ctx.strokeStyle="#8844ff";
-      const x=pad+c*span,y=pad+r*span,rad=span*.42;
-      ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.stroke();
+function initBoardDOM(){
+  const grid=document.getElementById("hex-grid");grid.innerHTML="";
+  for(let i=0;i<WIDTHS.length;i++){
+    const z=i-MID,rowCells=CELLS.filter(c=>c.z===z).sort((a,b)=>a.q-b.q);
+    const row=document.createElement("div");row.className="hex-row";
+    for(const c of rowCells){
+      const cell=document.createElement("div");cell.className="cell";
+      cell.dataset.q=c.q;cell.dataset.z=c.z;
+      const inner=document.createElement("div");inner.className="cell-inner";
+      cell.appendChild(inner);cell.addEventListener("click",()=>play(c.q,c.z));row.appendChild(cell);
     }
+    grid.appendChild(row);
   }
-  ctx.setLineDash([]);
-
-  if(pendingRemoves.length>0){
-    ctx.lineWidth=3;
-    ctx.strokeStyle="#ffcc00";
-    for(const [r,c] of pendingRemoves){
-      const x=pad+c*span,y=pad+r*span,rad=span*.45;
-      ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.stroke();
-    }
-  }
-
-  for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(board[r][c]){
-    const x=pad+c*span,y=pad+r*span,rad=span*.39;
-    const g=ctx.createRadialGradient(x-rad*.3,y-rad*.35,rad*.08,x,y,rad);
-    if(board[r][c]===RED){g.addColorStop(0,"#ff7777");g.addColorStop(1,"#b30000");}
-    else {g.addColorStop(0,"#7799ff");g.addColorStop(1,"#0033cc");}
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=board[r][c]===RED?"#800000":"#002299";ctx.lineWidth=1;ctx.stroke();
-  }
-
-  if(lastMove){const [r,c]=lastMove,x=pad+c*span,y=pad+r*span;ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.strokeRect(x-4,y-4,8,8);}
-
-  canvas._pad=pad;canvas._span=span;canvas._css=css;
 }
 
-canvas.addEventListener("click",e=>{
-  if(gameOver)return;
-  const rect=canvas.getBoundingClientRect();
-  const x=(e.clientX-rect.left)*(canvas._css/rect.width);
-  const y=(e.clientY-rect.top)*(canvas._css/rect.height);
-  const c=Math.round((x-canvas._pad)/canvas._span);
-  const r=Math.round((y-canvas._pad)/canvas._span);
-  if(inside(r,c))play(r,c);
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();undo();}
 });
-canvas.addEventListener("touchend",e=>{
-  if(gameOver)return;
-  const t=e.changedTouches[0],rect=canvas.getBoundingClientRect();
-  const x=(t.clientX-rect.left)*(canvas._css/rect.width), y=(t.clientY-rect.top)*(canvas._css/rect.height);
-  const c=Math.round((x-canvas._pad)/canvas._span),r=Math.round((y-canvas._pad)/canvas._span);
-  if(inside(r,c)){e.preventDefault();play(r,c)}
-},{passive:false});
+document.getElementById("btn-reset").onclick=newGame;
+document.getElementById("btn-undo").onclick=undo;
+document.getElementById("btn-reset-learn").onclick=resetLearnData;
+modeEl.onchange=newGame;sideEl.onchange=newGame;
+diffEl.onchange=()=>{newGame();updateLearnUI();};
 
-document.getElementById("newGame").onclick=newGame;
-document.getElementById("undo").onclick=undo;
-modeEl.onchange=newGame; sideEl.onchange=newGame; diffEl.onchange=newGame;
-window.addEventListener("resize",resizeCanvas);
-newGame();resizeCanvas();
+initBoardDOM();
+newGame();
+loadLearn();
 </script>
 </body>
 </html>
