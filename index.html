@@ -621,8 +621,6 @@
 
 /* ============================================================
    1) 인증 — 로컬 회원가입 / 로그인 / 관리자 지정
-   계정 정보는 이 기기(localStorage)에만 저장됩니다.
-   처음 가입하는 계정이 자동으로 관리자가 됩니다.
    ============================================================ */
 const USERS_KEY = "boku-users-v1";
 const SESSION_KEY = "boku-session-v1";
@@ -632,9 +630,7 @@ function loadUsers() {
     const v = localStorage.getItem(USERS_KEY);
     const p = v ? JSON.parse(v) : {};
     return p && typeof p === "object" ? p : {};
-  } catch (e) {
-    return {};
-  }
+  } catch (e) { return {}; }
 }
 function saveUsers(u) {
   try { localStorage.setItem(USERS_KEY, JSON.stringify(u)); } catch (e) {}
@@ -651,14 +647,12 @@ function randomSalt() {
 function signup(idRaw, pw, pw2) {
   const id = idRaw.trim();
   if (!id) return { ok: false, error: "아이디를 입력해주세요." };
-  if (id.length < 2 || id.length > 16)
-    return { ok: false, error: "아이디는 2자 이상 16자 이하로 해주세요." };
-  if (!pw || pw.length < 4)
-    return { ok: false, error: "비밀번호는 4자 이상으로 만들어주세요." };
+  if (id.length < 2 || id.length > 16) return { ok: false, error: "아이디는 2자 이상 16자 이하로 해주세요." };
+  if (!pw || pw.length < 4) return { ok: false, error: "비밀번호는 4자 이상으로 만들어주세요." };
   if (pw !== pw2) return { ok: false, error: "비밀번호가 서로 다릅니다." };
   const users = loadUsers();
   if (users[id]) return { ok: false, error: "이미 사용 중인 아이디입니다." };
-  const isFirst = Object.keys(users).length === 0; // 첫 가입자 = 관리자
+  const isFirst = Object.keys(users).length === 0; 
   const salt = randomSalt();
   users[id] = { hash: hashPw(pw, salt), salt, admin: isFirst, createdAt: Date.now() };
   saveUsers(users);
@@ -668,8 +662,7 @@ function login(idRaw, pw) {
   const id = idRaw.trim();
   const users = loadUsers();
   const u = users[id];
-  if (!u || u.hash !== hashPw(pw, u.salt))
-    return { ok: false, error: "아이디 또는 비밀번호가 올바르지 않습니다." };
+  if (!u || u.hash !== hashPw(pw, u.salt)) return { ok: false, error: "아이디 또는 비밀번호가 올바르지 않습니다." };
   return { ok: true, userId: id, isAdmin: u.admin };
 }
 function getSession() {
@@ -677,9 +670,7 @@ function getSession() {
     const id = localStorage.getItem(SESSION_KEY);
     if (!id) return null;
     return loadUsers()[id] ? id : null;
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 function setSession(id) {
   try {
@@ -689,10 +680,8 @@ function setSession(id) {
 }
 function setAdminFlag(actorId, targetId, admin) {
   const users = loadUsers();
-  if (!users[actorId] || !users[actorId].admin)
-    return { error: "관리자만 변경할 수 있습니다." };
-  if (targetId === actorId && !admin)
-    return { error: "본인의 관리자 권한은 해제할 수 없습니다." };
+  if (!users[actorId] || !users[actorId].admin) return { error: "관리자만 변경할 수 있습니다." };
+  if (targetId === actorId && !admin) return { error: "본인의 관리자 권한은 해제할 수 없습니다." };
   if (!users[targetId]) return { error: "존재하지 않는 계정입니다." };
   users[targetId].admin = admin;
   saveUsers(users);
@@ -705,7 +694,6 @@ function currentIsAdmin() {
   return !!(u && u.admin);
 }
 
-/* ---------- 인증 화면 ---------- */
 const authScreen = document.getElementById("auth-screen");
 const gameScreen = document.getElementById("game-screen");
 const authTitle = document.getElementById("auth-title");
@@ -724,25 +712,18 @@ let authTab = "signup";
 function renderAuth() {
   const isSignup = authTab === "signup";
   authTitle.textContent = isSignup ? "회원가입" : "로그인";
-  authDesc.textContent = isSignup
-    ? "게임을 시작하려면 아이디와 비밀번호를 만들어주세요."
-    : "가입한 계정으로 로그인해주세요.";
+  authDesc.textContent = isSignup ? "게임을 시작하려면 아이디와 비밀번호를 만들어주세요." : "가입한 계정으로 로그인해주세요.";
   authPw2.style.display = isSignup ? "" : "none";
   authNote.style.display = isSignup ? "" : "none";
   authSubmit.textContent = isSignup ? "가입하기" : "로그인";
-  authSwitch.textContent = isSignup
-    ? "이미 계정이 있나요? 로그인"
-    : "계정이 없나요? 회원가입";
+  authSwitch.textContent = isSignup ? "이미 계정이 있나요? 로그인" : "계정이 없나요? 회원가입";
   authPw2.value = "";
   authError.style.display = "none";
 }
 
 authForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const res =
-    authTab === "signup"
-      ? signup(authId.value, authPw.value, authPw2.value)
-      : login(authId.value, authPw.value);
+  const res = authTab === "signup" ? signup(authId.value, authPw.value, authPw2.value) : login(authId.value, authPw.value);
   if (!res.ok) {
     authError.textContent = res.error;
     authError.style.display = "block";
@@ -757,7 +738,6 @@ authSwitch.addEventListener("click", () => {
   renderAuth();
 });
 
-/* ---------- 유저바 / 화면 전환 ---------- */
 function renderUserBar() {
   const admin = currentIsAdmin();
   document.getElementById("ub-name").textContent = currentUser;
@@ -778,7 +758,7 @@ function enterGame(userId) {
 }
 
 document.getElementById("btn-logout").addEventListener("click", () => {
-  gameEpoch++; // 진행 중이던 AI 타이머 무효화
+  gameEpoch++; 
   currentUser = null;
   setSession(null);
   closeAdminPanel();
@@ -788,7 +768,6 @@ document.getElementById("btn-logout").addEventListener("click", () => {
   renderAuth();
 });
 
-/* ---------- 관리자 지정 패널 ---------- */
 const adminOverlay = document.getElementById("admin-overlay");
 document.getElementById("btn-admin").addEventListener("click", () => {
   renderAdminList();
@@ -798,19 +777,14 @@ document.getElementById("admin-close").addEventListener("click", closeAdminPanel
 adminOverlay.addEventListener("click", (e) => {
   if (e.target === adminOverlay) closeAdminPanel();
 });
-function closeAdminPanel() {
-  adminOverlay.classList.remove("show");
-}
+function closeAdminPanel() { adminOverlay.classList.remove("show"); }
 function renderAdminList() {
   const users = loadUsers();
   const list = document.getElementById("admin-list");
   list.innerHTML = "";
-  Object.entries(users)
-    .sort((a, b) => a[1].createdAt - b[1].createdAt)
-    .forEach(([id, u]) => {
+  Object.entries(users).sort((a, b) => a[1].createdAt - b[1].createdAt).forEach(([id, u]) => {
       const row = document.createElement("div");
       row.className = "admin-row";
-
       const who = document.createElement("span");
       who.className = "who";
       who.appendChild(document.createTextNode(id));
@@ -826,7 +800,6 @@ function renderAdminList() {
         me.textContent = "(나)";
         who.appendChild(me);
       }
-
       const btn = document.createElement("button");
       if (u.admin) {
         btn.textContent = "관리자 해제";
@@ -837,10 +810,7 @@ function renderAdminList() {
         btn.addEventListener("click", () => {
           const r = setAdminFlag(currentUser, id, false);
           if (r.error) alert(r.error);
-          else {
-            renderAdminList();
-            renderUserBar();
-          }
+          else { renderAdminList(); renderUserBar(); }
         });
       } else {
         btn.textContent = "관리자로 지정";
@@ -850,7 +820,6 @@ function renderAdminList() {
           else renderAdminList();
         });
       }
-
       row.appendChild(who);
       row.appendChild(btn);
       list.appendChild(row);
@@ -864,48 +833,32 @@ const WIDTHS = [5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5];
 const MID = 5;
 const CELLS = [];
 const cellSet = new Set();
-function key(q, z) {
-  return q + "," + z;
-}
+function key(q, z) { return q + "," + z; }
 for (let i = 0; i < WIDTHS.length; i++) {
-  const w = WIDTHS[i],
-    z = i - MID,
-    start = -(w - 1);
+  const w = WIDTHS[i], z = i - MID, start = -(w - 1);
   for (let j = 0; j < w; j++) {
     const q = start + 2 * j;
     CELLS.push({ q, z });
     cellSet.add(key(q, z));
   }
 }
-function exists(q, z) {
-  return cellSet.has(key(q, z));
-}
+function exists(q, z) { return cellSet.has(key(q, z)); }
 
-// BOKU의 3축: 가로 + 두 대각선
 const DIRS = [
-  { dq: 2, dz: 0 },
-  { dq: -2, dz: 0 },
-  { dq: 1, dz: 1 },
-  { dq: -1, dz: -1 },
-  { dq: -1, dz: 1 },
-  { dq: 1, dz: -1 },
+  { dq: 2, dz: 0 }, { dq: -2, dz: 0 },
+  { dq: 1, dz: 1 }, { dq: -1, dz: -1 },
+  { dq: -1, dz: 1 }, { dq: 1, dz: -1 },
 ];
 const AXES = [
-  [DIRS[0], DIRS[1]],
-  [DIRS[2], DIRS[3]],
-  [DIRS[4], DIRS[5]],
+  [DIRS[0], DIRS[1]], [DIRS[2], DIRS[3]], [DIRS[4], DIRS[5]],
 ];
 const AXIS_POS = [
-  { dq: 2, dz: 0 },
-  { dq: 1, dz: 1 },
-  { dq: -1, dz: 1 },
+  { dq: 2, dz: 0 }, { dq: 1, dz: 1 }, { dq: -1, dz: 1 },
 ];
 
 const FIREBASE_DB_URL = "https://boku-d4eb3-default-rtdb.firebaseio.com";
 const LEARN_KEY = "battle-ai-learn-v1";
-const LEARN_STEP = 0.04,
-  LEARN_MAX = 0.6,
-  MIN_MOVES_FOR_LEARNING = 14;
+const LEARN_STEP = 0.04, LEARN_MAX = 0.6, MIN_MOVES_FOR_LEARNING = 14;
 const DIFF = {
   easy: { depthEarly: 2, depthLate: 1, cands: 6, aggro: 1.0, defense: 1.0 },
   normal: { depthEarly: 3, depthLate: 2, cands: 8, aggro: 1.2, defense: 1.2 },
@@ -913,38 +866,17 @@ const DIFF = {
   master: { depthEarly: 6, depthLate: 5, cands: 12, aggro: 1.8, defense: 1.8 },
 };
 const PATTERN_SCORE = {
-  "5": 10000000000,
-  "4,2": 100000000,
-  "4,1": 30000000,
-  "4,0": 5000000,
-  "3,2": 1500000,
-  "3,1": 300000,
-  "3,0": 60000,
-  "2,2": 60000,
-  "2,1": 15000,
-  "2,0": 2000,
-  "1,2": 1500,
-  "1,1": 500,
+  "5": 10000000000, "4,2": 100000000, "4,1": 30000000, "4,0": 5000000,
+  "3,2": 1500000, "3,1": 300000, "3,0": 60000, "2,2": 60000,
+  "2,1": 15000, "2,0": 2000, "1,2": 1500, "1,1": 500,
 };
-const INF = 1e14,
-  MAX_TT = 50000;
+const INF = 1e14, MAX_TT = 50000;
 const TT = new Map();
 
-let board = new Map(),
-  currentPlayer = 1,
-  gameOver = false,
-  isDraw = false,
-  captureMode = false;
-let captureCandidates = [],
-  pendingGroups = [],
-  lastPlaced = null,
-  scores = [0, 0];
-let blockedCell = null,
-  history = [],
-  aiThinking = false;
-let LEARN = null,
-  learnReady = false,
-  learnMode = "firebase";
+let board = new Map(), currentPlayer = 1, gameOver = false, isDraw = false, captureMode = false;
+let captureCandidates = [], pendingGroups = [], lastPlaced = null, scores = [0, 0];
+let blockedCell = null, history = [], aiThinking = false;
+let LEARN = null, learnReady = false, learnMode = "firebase";
 let gameEpoch = 0;
 
 const modeEl = document.getElementById("mode");
@@ -952,63 +884,32 @@ const diffEl = document.getElementById("difficulty");
 const sideEl = document.getElementById("side");
 const logEl = document.getElementById("game-log");
 
-function other(p) {
-  return p === 1 ? 2 : 1;
-}
-function centerDist(q, z) {
-  return Math.abs(q) + Math.abs(z);
-}
-function getStone(q, z, b = board) {
-  return b.get(key(q, z)) || 0;
-}
+function other(p) { return p === 1 ? 2 : 1; }
+function centerDist(q, z) { return Math.abs(q) + Math.abs(z); }
+function getStone(q, z, b = board) { return b.get(key(q, z)) || 0; }
 function setStone(q, z, v, b = board) {
   const k = key(q, z);
-  if (v === 0) b.delete(k);
-  else b.set(k, v);
+  if (v === 0) b.delete(k); else b.set(k, v);
 }
-function cloneBoard(b) {
-  return new Map(b);
-}
-
-function axial(q, z) {
-  return { a: (q + z) / 2, b: z };
-}
+function cloneBoard(b) { return new Map(b); }
+function axial(q, z) { return { a: (q + z) / 2, b: z }; }
 function hexDist(a, b) {
-  const x = axial(a.q, a.z),
-    y = axial(b.q, b.z);
-  return Math.max(
-    Math.abs(x.a - y.a),
-    Math.abs(x.b - y.b),
-    Math.abs(x.a - x.b - (y.a - y.b))
-  );
+  const x = axial(a.q, a.z), y = axial(b.q, b.z);
+  return Math.max(Math.abs(x.a - y.a), Math.abs(x.b - y.b), Math.abs(x.a - x.b - (y.a - y.b)));
 }
 
 function snapshot() {
   return {
-    board: cloneBoard(board),
-    currentPlayer,
-    captureMode,
-    captureCandidates: captureCandidates.slice(),
-    pendingGroups: pendingGroups.map((g) => g.slice()),
-    lastPlaced: lastPlaced ? { ...lastPlaced } : null,
-    blockedCell: blockedCell ? { ...blockedCell } : null,
-    scores: scores.slice(),
-    gameOver,
-    isDraw
+    board: cloneBoard(board), currentPlayer, captureMode, captureCandidates: captureCandidates.slice(),
+    pendingGroups: pendingGroups.map((g) => g.slice()), lastPlaced: lastPlaced ? { ...lastPlaced } : null,
+    blockedCell: blockedCell ? { ...blockedCell } : null, scores: scores.slice(), gameOver, isDraw
   };
 }
 function restoreSnapshot(s) {
-  board = cloneBoard(s.board);
-  currentPlayer = s.currentPlayer;
-  captureMode = s.captureMode;
-  captureCandidates = s.captureCandidates.slice();
-  pendingGroups = (s.pendingGroups || []).map((g) => g.slice());
-  lastPlaced = s.lastPlaced ? { ...s.lastPlaced } : null;
-  blockedCell = s.blockedCell ? { ...s.blockedCell } : null;
-  scores = s.scores ? s.scores.slice() : [0, 0];
-  gameOver = !!s.gameOver;
-  isDraw = !!s.isDraw;
-  aiThinking = false;
+  board = cloneBoard(s.board); currentPlayer = s.currentPlayer; captureMode = s.captureMode;
+  captureCandidates = s.captureCandidates.slice(); pendingGroups = (s.pendingGroups || []).map((g) => g.slice());
+  lastPlaced = s.lastPlaced ? { ...s.lastPlaced } : null; blockedCell = s.blockedCell ? { ...s.blockedCell } : null;
+  scores = s.scores ? s.scores.slice() : [0, 0]; gameOver = !!s.gameOver; isDraw = !!s.isDraw; aiThinking = false;
 }
 
 function addLog(txt) {
@@ -1017,17 +918,14 @@ function addLog(txt) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-function isForbiddenToPlace(q, z) {
-  return blockedCell && blockedCell.q === q && blockedCell.z === z;
-}
+function isForbiddenToPlace(q, z) { return blockedCell && blockedCell.q === q && blockedCell.z === z; }
 
 function checkWin(q, z, player, b = board) {
   for (const [d1, d2] of AXES) {
     const line = [{ q, z }];
     for (const d of [d1, d2]) {
       for (let i = 1; i < 5; i++) {
-        const nq = q + d.dq * i,
-          nz = z + d.dz * i;
+        const nq = q + d.dq * i, nz = z + d.dz * i;
         if (!exists(nq, nz) || getStone(nq, nz, b) !== player) break;
         line.push({ q: nq, z: nz });
       }
@@ -1038,33 +936,19 @@ function checkWin(q, z, player, b = board) {
 }
 
 function findCaptures(q, z, player, b = board) {
-  const opp = other(player),
-    groups = [];
+  const opp = other(player), groups = [];
   for (const d of DIRS) {
-    const a = { q: q + d.dq, z: z + d.dz },
-      b2 = { q: q + d.dq * 2, z: z + d.dz * 2 },
-      c = { q: q + d.dq * 3, z: z + d.dz * 3 };
-    if (
-      exists(a.q, a.z) &&
-      exists(b2.q, b2.z) &&
-      exists(c.q, c.z) &&
-      getStone(a.q, a.z, b) === opp &&
-      getStone(b2.q, b2.z, b) === opp &&
-      getStone(c.q, c.z, b) === player
-    ) {
-      const g = [a, b2];
-      groups.push(g);
+    const a = { q: q + d.dq, z: z + d.dz }, b2 = { q: q + d.dq * 2, z: z + d.dz * 2 }, c = { q: q + d.dq * 3, z: z + d.dz * 3 };
+    if (exists(a.q, a.z) && exists(b2.q, b2.z) && exists(c.q, c.z) &&
+        getStone(a.q, a.z, b) === opp && getStone(b2.q, b2.z, b) === opp && getStone(c.q, c.z, b) === player) {
+      groups.push([a, b2]);
     }
   }
-  const flat = [],
-    seen = new Set();
+  const flat = [], seen = new Set();
   for (const g of groups)
     for (const c of g) {
       const k = key(c.q, c.z);
-      if (!seen.has(k)) {
-        seen.add(k);
-        flat.push(c);
-      }
+      if (!seen.has(k)) { seen.add(k); flat.push(c); }
     }
   return flat;
 }
@@ -1075,13 +959,47 @@ function applyMoveNoRemove(b, q, z, p) {
   return { board: nb, caps: findCaptures(q, z, p, nb) };
 }
 
+// [수정] chooseAIRemove: AI가 샌드위치할 때 돌을 고르는 로직 향상
+function chooseAIRemove(candidates, me, bAfterMove) {
+  const opp = other(me);
+
+  // 1. (필승 콤보!) 내가 이 돌을 제거하고 다음 턴에 그 자리에 두면 이길 수 있는가?
+  // (상대는 1턴 배치 금지라 막을 수 없으므로 무조건 이김)
+  for (const c of candidates) {
+    const nb = cloneBoard(bAfterMove);
+    setStone(c.q, c.z, 0, nb); // 제거 시뮬레이션
+    setStone(c.q, c.z, me, nb); // 내가 그 자리에 둔다고 가정
+    if (checkWin(c.q, c.z, me, nb)) return c; // 무조건 이거 제거!
+  }
+
+  // 2. 이 돌을 제거해야 상대방의 다음 턴 5목 승리를 막을 수 있는가?
+  for (const c of candidates) {
+    const nb = cloneBoard(bAfterMove);
+    setStone(c.q, c.z, opp, nb); // 상대가 돌을 유지한다고 가정
+    if (checkWin(c.q, c.z, opp, nb)) return c; // 위험한 돌부터 제거!
+  }
+
+  // 3. 기존 휴리스틱 (중앙 쪽에 가깝고 다른 상대 돌과 붙어있는 것)
+  let best = null, bestScore = -Infinity;
+  for (const c of candidates) {
+    let score = 0;
+    for (const d of DIRS) {
+      if (exists(c.q - d.dq, c.z - d.dz) && getStone(c.q - d.dq, c.z - d.dz, bAfterMove) === opp) score += 2;
+      if (exists(c.q + d.dq, c.z + d.dz) && getStone(c.q + d.dq, c.z + d.dz, bAfterMove) === opp) score += 2;
+    }
+    score += 14 - centerDist(c.q, c.z);
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  return best || candidates[0];
+}
+
 function applyMove(b, q, z, p) {
   const nb = cloneBoard(b);
   setStone(q, z, p, nb);
   const caps = findCaptures(q, z, p, nb);
   let removed = null;
   if (caps.length) {
-    removed = chooseAIRemove(caps, p);
+    removed = chooseAIRemove(caps, p, nb); // 보드 상태 같이 넘김
     setStone(removed.q, removed.z, 0, nb); 
   }
   return { board: nb, caps, removed };
@@ -1091,40 +1009,28 @@ function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
   if (!removed) return 0;
   const opp = other(p);
   let defect = 0;
-
   for (const d of DIRS) {
     const adjOpp = { q: removed.q + d.dq, z: removed.z + d.dz };
     const mySide = { q: removed.q - d.dq, z: removed.z - d.dz };
     const oppCapSpot = { q: removed.q - d.dq * 2, z: removed.z - d.dz * 2 };
-    
-    if (
-      exists(adjOpp.q, adjOpp.z) && getStone(adjOpp.q, adjOpp.z, bAfterRemove) === opp &&
-      exists(mySide.q, mySide.z) && getStone(mySide.q, mySide.z, bAfterRemove) === p &&
-      exists(oppCapSpot.q, oppCapSpot.z) && getStone(oppCapSpot.q, oppCapSpot.z, bAfterRemove) === 0
-    ) {
+    if (exists(adjOpp.q, adjOpp.z) && getStone(adjOpp.q, adjOpp.z, bAfterRemove) === opp &&
+        exists(mySide.q, mySide.z) && getStone(mySide.q, mySide.z, bAfterRemove) === p &&
+        exists(oppCapSpot.q, oppCapSpot.z) && getStone(oppCapSpot.q, oppCapSpot.z, bAfterRemove) === 0) {
       defect += 50000;
     }
   }
-
   for (const c of CELLS) {
     if (getStone(c.q, c.z, bAfterRemove) === 0) {
       const oppCaps = findCaptures(c.q, c.z, opp, bAfterRemove);
-      if (oppCaps.length > 0) {
-        defect += 80000; 
-        break;
-      }
+      if (oppCaps.length > 0) { defect += 80000; break; }
     }
   }
-
   let connectionCount = 0;
   for (const d of DIRS) {
     const adj = { q: m.q + d.dq, z: m.z + d.dz };
     if (exists(adj.q, adj.z) && getStone(adj.q, adj.z, bAfterRemove) === p) connectionCount++;
   }
-  if (connectionCount === 0) {
-    defect += 25000; 
-  }
-
+  if (connectionCount === 0) defect += 25000; 
   return defect;
 }
 
@@ -1135,17 +1041,8 @@ function isTrapCell(c, b, me) {
     const neighbor = { q: c.q + d.dq, z: c.z + d.dz };
     const anchor = { q: c.q + d.dq * 2, z: c.z + d.dz * 2 };
     const capSpot = { q: c.q - d.dq, z: c.z - d.dz };
-    if (
-      !exists(neighbor.q, neighbor.z) ||
-      !exists(anchor.q, anchor.z) ||
-      !exists(capSpot.q, capSpot.z)
-    )
-      continue;
-    if (
-      getStone(neighbor.q, neighbor.z, b) === opp &&
-      getStone(anchor.q, anchor.z, b) === me &&
-      getStone(capSpot.q, capSpot.z, b) === 0
-    )
+    if (!exists(neighbor.q, neighbor.z) || !exists(anchor.q, anchor.z) || !exists(capSpot.q, capSpot.z)) continue;
+    if (getStone(neighbor.q, neighbor.z, b) === opp && getStone(anchor.q, anchor.z, b) === me && getStone(capSpot.q, capSpot.z, b) === 0)
       return true;
   }
   return false;
@@ -1155,44 +1052,43 @@ function legalMoves(b = board) {
   if (!b.size) return CELLS.slice();
   const set = new Set();
   for (const s of CELLS)
-    if (
-      !getStone(s.q, s.z, b) &&
-      !(blockedCell && blockedCell.q === s.q && blockedCell.z === s.z)
-    ) {
+    if (!getStone(s.q, s.z, b) && !(blockedCell && blockedCell.q === s.q && blockedCell.z === s.z)) {
       let near = false;
       for (const o of CELLS)
-        if (getStone(o.q, o.z, b) && hexDist(s, o) <= 2) {
-          near = true;
-          break;
-        }
+        if (getStone(o.q, o.z, b) && hexDist(s, o) <= 2) { near = true; break; }
       if (near) set.add(key(s.q, s.z));
     }
-  return [...set].map((k) => {
-    const [q, z] = k.split(",").map(Number);
-    return { q, z };
-  });
+  return [...set].map((k) => { const [q, z] = k.split(",").map(Number); return { q, z }; });
 }
 
 function prioritySortMoves(moves, me, b) {
   if (!b.size) {
-    return moves.slice().sort((A, B) => {
-      const a = Math.abs(A.q) + Math.abs(A.z),
-        bb = Math.abs(B.q) + Math.abs(B.z);
-      return a - bb;
-    });
+    return moves.slice().sort((A, B) => { return (Math.abs(A.q) + Math.abs(A.z)) - (Math.abs(B.q) + Math.abs(B.z)); });
   }
-  return moves
-    .map((m) => {
-      let density = 0;
-      for (const o of CELLS) if (getStone(o.q, o.z, b) && hexDist(m, o) <= 2) density++;
-      return { m, density };
+  const opp = other(me);
+  return moves.map((m) => {
+      let score = 0;
+      for (const o of CELLS) {
+        if (getStone(o.q, o.z, b)) {
+          let dist = hexDist(m, o);
+          if (dist === 1) score += 3; else if (dist === 2) score += 1;
+        }
+      }
+      if (findCaptures(m.q, m.z, me, b).length > 0) score += 50;
+      for (const d of DIRS) {
+        let adjOpp = 0, adjMe = 0;
+        for (let i = 1; i <= 4; i++) {
+          if (getStone(m.q + d.dq * i, m.z + d.dz * i, b) === opp) adjOpp++; else break;
+        }
+        if (adjOpp >= 2) score += 200; 
+        for (let i = 1; i <= 4; i++) {
+          if (getStone(m.q + d.dq * i, m.z + d.dz * i, b) === me) adjMe++; else break;
+        }
+        if (adjMe >= 2) score += 100; 
+      }
+      return { m, score };
     })
-    .sort((x, y) => {
-      if (y.density !== x.density) return y.density - x.density;
-      const cx = Math.abs(x.m.q) + Math.abs(x.m.z),
-        cy = Math.abs(y.m.q) + Math.abs(y.m.z);
-      return cx - cy;
-    })
+    .sort((x, y) => y.score - x.score) 
     .map((x) => x.m);
 }
 
@@ -1202,27 +1098,17 @@ function patternScore(len, open) {
 }
 
 function evaluate(b, me, capMe = 0, capOpp = 0) {
-  const cfg = effectiveCfg(),
-    aggro = cfg.aggro,
-    def = cfg.defense,
-    opp = other(me);
+  const cfg = effectiveCfg(), aggro = cfg.aggro, def = cfg.defense, opp = other(me);
   let score = 0;
   for (const p of [me, opp]) {
     const sign = p === me ? aggro : -def;
     for (const start of CELLS) {
       if (getStone(start.q, start.z, b) !== p) continue;
       for (const d of AXIS_POS) {
-        const pr = start.q - d.dq,
-          pz = start.z - d.dz;
+        const pr = start.q - d.dq, pz = start.z - d.dz;
         if (exists(pr, pz) && getStone(pr, pz, b) === p) continue;
-        let len = 0,
-          q = start.q,
-          z = start.z;
-        while (exists(q, z) && getStone(q, z, b) === p) {
-          len++;
-          q += d.dq;
-          z += d.dz;
-        }
+        let len = 0, q = start.q, z = start.z;
+        while (exists(q, z) && getStone(q, z, b) === p) { len++; q += d.dq; z += d.dz; }
         const preOpen = exists(pr, pz) && getStone(pr, pz, b) === 0;
         const postOpen = exists(q, z) && getStone(q, z, b) === 0;
         const open = (preOpen ? 1 : 0) + (postOpen ? 1 : 0);
@@ -1243,15 +1129,11 @@ function evaluate(b, me, capMe = 0, capOpp = 0) {
 function terminalScore(b, me, ply) {
   for (const c of CELLS) {
     const p = getStone(c.q, c.z, b);
-    if (p && checkWin(c.q, c.z, p, b))
-      return p === me ? 10000000000 - ply : -10000000000 + ply;
+    if (p && checkWin(c.q, c.z, p, b)) return p === me ? 10000000000 - ply : -10000000000 + ply;
   }
   return null;
 }
-
-function boardKey(b) {
-  return CELLS.map((c) => getStone(c.q, c.z, b)).join("");
-}
+function boardKey(b) { return CELLS.map((c) => getStone(c.q, c.z, b)).join(""); }
 
 function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
   const term = terminalScore(b, me, ply);
@@ -1260,7 +1142,6 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
   const k = boardKey(b) + "|" + player + "|" + depth + "|" + capMe + "|" + capOpp;
   const cached = TT.get(k);
   if (cached !== undefined) return cached;
-
   let moves = prioritySortMoves(legalMoves(b), player, b);
   const cfg = DIFF[diffEl.value];
   if (!moves.length) return evaluate(b, me, capMe, capOpp);
@@ -1271,23 +1152,9 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
     const addCap = res.caps.length ? 1 : 0;
     const nM = capMe + (player === me ? addCap : 0);
     const nO = capOpp + (player !== me ? addCap : 0);
-
     let defect = 0;
-    if (res.removed) {
-      defect = evaluateSandwichDefect(res.board, m, res.removed, player);
-    }
-
-    let v = minimax(
-      res.board,
-      depth - 1,
-      alpha,
-      beta,
-      me,
-      other(player),
-      ply + 1,
-      nM,
-      nO
-    );
+    if (res.removed) defect = evaluateSandwichDefect(res.board, m, res.removed, player);
+    let v = minimax(res.board, depth - 1, alpha, beta, me, other(player), ply + 1, nM, nO);
 
     if (player === me) {
       v -= defect;
@@ -1300,61 +1167,36 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
     }
     if (beta <= alpha) break;
   }
-
   if (TT.size > MAX_TT) TT.delete(TT.keys().next().value);
   TT.set(k, best);
   return best;
 }
 
 function findOpenThrees(b, p) {
-  const threats = [],
-    seen = new Set();
+  const threats = [], seen = new Set();
   for (const start of CELLS) {
     if (getStone(start.q, start.z, b) !== p) continue;
     for (const d of AXIS_POS) {
-      const pr = start.q - d.dq,
-        pz = start.z - d.dz;
+      const pr = start.q - d.dq, pz = start.z - d.dz;
       if (exists(pr, pz) && getStone(pr, pz, b) === p) continue;
-      let len = 0,
-        q = start.q,
-        z = start.z;
-      while (exists(q, z) && getStone(q, z, b) === p) {
-        len++;
-        q += d.dq;
-        z += d.dz;
-      }
+      let len = 0, q = start.q, z = start.z;
+      while (exists(q, z) && getStone(q, z, b) === p) { len++; q += d.dq; z += d.dz; }
       if (len !== 3) continue;
-      const before = { q: pr, z: pz },
-        after = { q, z };
-      if (!(exists(before.q, before.z) && getStone(before.q, before.z, b) === 0))
-        continue;
-      if (!(exists(after.q, after.z) && getStone(after.q, after.z, b) === 0))
-        continue;
-      const k = [
-        key(start.q, start.z),
-        key(start.q + d.dq, start.z + d.dz),
-        key(start.q + 2 * d.dq, start.z + 2 * d.dz),
-      ]
-        .sort()
-        .join("|");
-      if (!seen.has(k)) {
-        seen.add(k);
-        threats.push({ flanks: [before, after] });
-      }
+      const before = { q: pr, z: pz }, after = { q, z };
+      if (!(exists(before.q, before.z) && getStone(before.q, before.z, b) === 0)) continue;
+      if (!(exists(after.q, after.z) && getStone(after.q, after.z, b) === 0)) continue;
+      const k = [key(start.q, start.z), key(start.q + d.dq, start.z + d.dz), key(start.q + 2 * d.dq, start.z + 2 * d.dz)].sort().join("|");
+      if (!seen.has(k)) { seen.add(k); threats.push({ flanks: [before, after] }); }
     }
   }
   return threats;
 }
 
 function findBrokenThrees(b, p) {
-  const threats = [],
-    seen = new Set();
+  const threats = [], seen = new Set();
   for (const start of CELLS) {
     for (const d of AXIS_POS) {
-      const w = [0, 1, 2, 3].map((i) => ({
-        q: start.q + d.dq * i,
-        z: start.z + d.dz * i,
-      }));
+      const w = [0, 1, 2, 3].map((i) => ({ q: start.q + d.dq * i, z: start.z + d.dz * i, }));
       if (!w.every((c) => exists(c.q, c.z))) continue;
       const v = w.map((c) => getStone(c.q, c.z, b));
       let gapIdx = -1;
@@ -1368,10 +1210,7 @@ function findBrokenThrees(b, p) {
       const beforeOpen = exists(before.q, before.z) && getStone(before.q, before.z, b) === 0;
       const afterOpen = exists(after.q, after.z) && getStone(after.q, after.z, b) === 0;
       if (!beforeOpen && !afterOpen) continue;
-      const k = w
-        .map((c) => key(c.q, c.z))
-        .sort()
-        .join("|");
+      const k = w.map((c) => key(c.q, c.z)).sort().join("|");
       if (seen.has(k)) continue;
       seen.add(k);
       const flanks = [gap];
@@ -1383,52 +1222,81 @@ function findBrokenThrees(b, p) {
   return threats;
 }
 
-function chooseAIRemove(candidates, me) {
-  const opp = other(me);
-  let best = null,
-    bestScore = -Infinity;
-  for (const c of candidates) {
-    let score = 0;
-    for (const d of DIRS) {
-      if (
-        exists(c.q - d.dq, c.z - d.dz) &&
-        getStone(c.q - d.dq, c.z - d.dz) === opp
-      )
-        score += 2;
-      if (
-        exists(c.q + d.dq, c.z + d.dz) &&
-        getStone(c.q + d.dq, c.z + d.dz) === opp
-      )
-        score += 2;
-    }
-    score += 14 - centerDist(c.q, c.z);
-    if (score > bestScore) {
-      bestScore = score;
-      best = c;
-    }
-  }
-  return best || candidates[0];
-}
-
 function chooseAI(b, me) {
   let moves = prioritySortMoves(legalMoves(b), me, b);
   if (!moves.length) return null;
 
+  const opp = other(me);
+
+  // --- 오프닝: "붙여두기" (선수/후수 상관없이, 방향도 상관없이 인접한 곳에 붙인다) ---
+  {
+    let myStones = 0, oppStones = 0;
+    let oppCell = null;
+    for (const c of CELLS) {
+      const st = getStone(c.q, c.z, b);
+      if (st === me) myStones++;
+      else if (st === opp) { oppStones++; oppCell = c; }
+    }
+    // 내가 게임의 첫 수: 중앙에 둔다
+    if (myStones === 0 && oppStones === 0) {
+      if (exists(0, 0) && getStone(0, 0, b) === 0) return { q: 0, z: 0 };
+      return moves[0];
+    }
+    // 상대가 이제 막 한 수 두었고 내 돌은 아직 없거나(내가 후수) 하나뿐인
+    // 상태(내가 선수라 먼저 두고 상대가 응수한 상태) 모두, 상대 돌에 바로 붙인다.
+    if (oppStones === 1 && myStones <= 1) {
+      for (const d of DIRS) {
+        const cand = { q: oppCell.q + d.dq, z: oppCell.z + d.dz };
+        if (exists(cand.q, cand.z) && getStone(cand.q, cand.z, b) === 0) return cand;
+      }
+    }
+  }
+
+  // 1. 내 즉시 승리(5목) 확인
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
 
-  const opp = other(me);
+  // 2. [필승 전술] 샌드위치를 이용한 '배치 금지' 강제 5목 승리 
+  for (const m of moves) {
+    const nb = cloneBoard(b);
+    setStone(m.q, m.z, me, nb);
+    const caps = findCaptures(m.q, m.z, me, nb);
+    for (const cap of caps) {
+      const nb2 = cloneBoard(nb);
+      setStone(cap.q, cap.z, 0, nb2); // 상대 돌 제거 가정
+      setStone(cap.q, cap.z, me, nb2); // 그 자리에 내가 다음 턴에 둔다면?
+      if (checkWin(cap.q, cap.z, me, nb2)) {
+        return m; // 상대는 이 자리에 둘 수 없으므로 무조건 나의 승리!
+      }
+    }
+  }
+
+  // 3. 상대 즉시 승리(5목) 저지
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
 
-  const threats = findOpenThrees(b, opp),
-    moveSet = new Set(moves.map((m) => key(m.q, m.z)));
+  // 4. [방어 전술] 상대의 '배치 금지' 강제 5목 승리 저지
+  for (const m of moves) {
+    const nb = cloneBoard(b);
+    setStone(m.q, m.z, opp, nb);
+    const caps = findCaptures(m.q, m.z, opp, nb);
+    for (const cap of caps) {
+      const nb2 = cloneBoard(nb);
+      setStone(cap.q, cap.z, 0, nb2);
+      setStone(cap.q, cap.z, opp, nb2);
+      if (checkWin(cap.q, cap.z, opp, nb2)) {
+        return m; // 냅두면 샌드위치 당하고 확정 패배하므로 무조건 막기!
+      }
+    }
+  }
+
+  const threats = findOpenThrees(b, opp), moveSet = new Set(moves.map((m) => key(m.q, m.z)));
   for (const t of threats)
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
 
@@ -1436,41 +1304,22 @@ function chooseAI(b, me) {
   for (const t of brokenThreats) {
     for (const m of moves) {
       const res = applyMoveNoRemove(b, m.q, m.z, me);
-      if (res.caps.some((c) => t.stones.some((s) => s.q === c.q && s.z === c.z)))
-        return m;
+      if (res.caps.some((c) => t.stones.some((s) => s.q === c.q && s.z === c.z))) return m;
     }
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
   }
 
-  const turnCount = history.length + 1,
-    cfg = DIFF[diffEl.value];
+  const turnCount = history.length + 1, cfg = DIFF[diffEl.value];
   const depth = turnCount <= 15 ? cfg.depthEarly : cfg.depthLate;
-  let best = moves[0],
-    bestVal = -INF;
+  let best = moves[0], bestVal = -INF;
   TT.clear();
 
   for (const m of moves.slice(0, cfg.cands)) {
     const res = applyMove(b, m.q, m.z, me);
     let defect = 0;
-    if (res.removed) {
-      defect = evaluateSandwichDefect(res.board, m, res.removed, me);
-    }
-    const v = minimax(
-      res.board,
-      depth - 1,
-      -INF,
-      INF,
-      me,
-      opp,
-      1,
-      res.caps.length ? 1 : 0,
-      0
-    ) - defect;
-
-    if (v > bestVal) {
-      bestVal = v;
-      best = m;
-    }
+    if (res.removed) defect = evaluateSandwichDefect(res.board, m, res.removed, me);
+    const v = minimax(res.board, depth - 1, -INF, INF, me, opp, 1, res.caps.length ? 1 : 0, 0) - defect;
+    if (v > bestVal) { bestVal = v; best = m; }
   }
   return best;
 }
@@ -1490,71 +1339,43 @@ function effectiveCfg() {
 async function storageGet(key) {
   try {
     const r = await fetch(`${FIREBASE_DB_URL}/${encodeURIComponent(key)}.json`);
-    if (r.ok) {
-      const data = await r.json();
-      learnMode = "firebase";
-      return data;
-    }
+    if (r.ok) { const data = await r.json(); learnMode = "firebase"; return data; }
   } catch (e) {}
   learnMode = "local";
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : null;
-  } catch (e) {
-    return null;
-  }
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; }
 }
 async function storageSet(key, value) {
   try {
     const r = await fetch(`${FIREBASE_DB_URL}/${encodeURIComponent(key)}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(value),
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value),
     });
-    if (r.ok) {
-      learnMode = "firebase";
-      return true;
-    }
+    if (r.ok) { learnMode = "firebase"; return true; }
   } catch (e) {}
   learnMode = "local";
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {}
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
   return false;
 }
 function defaultLearn() {
   const L = {};
-  for (const k of Object.keys(DIFF))
-    L[k] = { aggroAdj: 0, defenseAdj: 0, games: 0, wins: 0, losses: 0 };
+  for (const k of Object.keys(DIFF)) L[k] = { aggroAdj: 0, defenseAdj: 0, games: 0, wins: 0, losses: 0 };
   return L;
 }
 async function loadLearn() {
   const data = await storageGet(LEARN_KEY);
   LEARN = data || defaultLearn();
   for (const k of Object.keys(DIFF))
-    if (!LEARN[k])
-      LEARN[k] = { aggroAdj: 0, defenseAdj: 0, games: 0, wins: 0, losses: 0 };
+    if (!LEARN[k]) LEARN[k] = { aggroAdj: 0, defenseAdj: 0, games: 0, wins: 0, losses: 0 };
   learnReady = true;
   updateLearnUI();
 }
-async function saveLearn() {
-  await storageSet(LEARN_KEY, LEARN);
-}
+async function saveLearn() { await storageSet(LEARN_KEY, LEARN); }
 function updateLearnUI() {
-  const rec = document.getElementById("learnRecord"),
-    bias = document.getElementById("learnBias");
+  const rec = document.getElementById("learnRecord"), bias = document.getElementById("learnBias");
   if (!rec || !bias) return;
-  if (!learnReady || !LEARN) {
-    rec.textContent = "불러오는 중…";
-    bias.textContent = "—";
-    return;
-  }
-  const L = LEARN[diffEl.value],
-    tag = learnMode === "firebase" ? "[웹 공유]" : "[내 기기]";
+  if (!learnReady || !LEARN) { rec.textContent = "불러오는 중…"; bias.textContent = "—"; return; }
+  const L = LEARN[diffEl.value], tag = learnMode === "firebase" ? "[웹 공유]" : "[내 기기]";
   rec.textContent = `${tag} ${L.games}전 ${L.wins}승 ${L.losses}패`;
-  bias.textContent = `공${L.aggroAdj >= 0 ? "+" : ""}${L.aggroAdj.toFixed(
-    2
-  )} / 수${L.defenseAdj >= 0 ? "+" : ""}${L.defenseAdj.toFixed(2)}`;
+  bias.textContent = `공${L.aggroAdj >= 0 ? "+" : ""}${L.aggroAdj.toFixed(2)} / 수${L.defenseAdj >= 0 ? "+" : ""}${L.defenseAdj.toFixed(2)}`;
 }
 
 function detectMissedBlock(winner) {
@@ -1565,17 +1386,12 @@ function detectMissedBlock(winner) {
     const nextBoard = i + 1 < history.length ? history[i + 1].board : board;
     let moveCell = null;
     for (const c of CELLS) {
-      if (!getStone(c.q, c.z, snap.board) && getStone(c.q, c.z, nextBoard) === loser) {
-        moveCell = c;
-        break;
-      }
+      if (!getStone(c.q, c.z, snap.board) && getStone(c.q, c.z, nextBoard) === loser) { moveCell = c; break; }
     }
     if (!moveCell) continue;
     const threats = findOpenThrees(snap.board, winner);
     if (threats.length) {
-      const blocked = threats.some((t) =>
-        t.flanks.some((f) => f.q === moveCell.q && f.z === moveCell.z)
-      );
+      const blocked = threats.some((t) => t.flanks.some((f) => f.q === moveCell.q && f.z === moveCell.z));
       if (!blocked) return true;
     }
   }
@@ -1584,25 +1400,18 @@ function detectMissedBlock(winner) {
 async function recordGameResult(winner, movesPlayed) {
   if (modeEl.value !== "ai" || !learnReady || !LEARN) return;
   if (movesPlayed < MIN_MOVES_FOR_LEARNING) {
-    addLog(`판이 너무 짧게(${movesPlayed}수) 끝나 학습에는 반영하지 않았습니다.`);
-    return;
+    addLog(`판이 너무 짧게(${movesPlayed}수) 끝나 학습에는 반영하지 않았습니다.`); return;
   }
-  const human = Number(sideEl.value),
-    ai = other(human);
+  const human = Number(sideEl.value), ai = other(human);
   if (winner === ai && detectMissedBlock(winner)) {
-    addLog("내가 열린 3을 막지 않아 진 판이라 학습에는 반영하지 않았습니다.");
-    return;
+    addLog("내가 열린 3을 막지 않아 진 판이라 학습에는 반영하지 않았습니다."); return;
   }
   const L = LEARN[diffEl.value];
   L.games++;
   if (winner === ai) {
-    L.wins++;
-    L.aggroAdj = Math.min(LEARN_MAX, L.aggroAdj + LEARN_STEP * 0.5);
-    L.defenseAdj = Math.max(-LEARN_MAX, L.defenseAdj - LEARN_STEP * 0.25);
+    L.wins++; L.aggroAdj = Math.min(LEARN_MAX, L.aggroAdj + LEARN_STEP * 0.5); L.defenseAdj = Math.max(-LEARN_MAX, L.defenseAdj - LEARN_STEP * 0.25);
   } else if (winner === human) {
-    L.losses++;
-    L.defenseAdj = Math.min(LEARN_MAX, L.defenseAdj + LEARN_STEP);
-    L.aggroAdj = Math.max(-LEARN_MAX, L.aggroAdj - LEARN_STEP * 0.3);
+    L.losses++; L.defenseAdj = Math.min(LEARN_MAX, L.defenseAdj + LEARN_STEP); L.aggroAdj = Math.max(-LEARN_MAX, L.aggroAdj - LEARN_STEP * 0.3);
   }
   await saveLearn();
   updateLearnUI();
@@ -1611,16 +1420,13 @@ async function recordGameResult(winner, movesPlayed) {
 /* ---------- 렌더 / 상태 ---------- */
 function render() {
   document.querySelectorAll("#hex-grid .cell").forEach((cell) => {
-    const q = +cell.dataset.q,
-      z = +cell.dataset.z;
+    const q = +cell.dataset.q, z = +cell.dataset.z;
     cell.className = "cell";
     const v = getStone(q, z);
     if (v === 1) cell.classList.add("has-stone", "p1");
     if (v === 2) cell.classList.add("has-stone", "p2");
-    if (lastPlaced && lastPlaced.q === q && lastPlaced.z === z)
-      cell.classList.add("last-placed");
-    if (captureMode && captureCandidates.some((c) => c.q === q && c.z === z))
-      cell.classList.add("capture-choice");
+    if (lastPlaced && lastPlaced.q === q && lastPlaced.z === z) cell.classList.add("last-placed");
+    if (captureMode && captureCandidates.some((c) => c.q === q && c.z === z)) cell.classList.add("capture-choice");
     if (isForbiddenToPlace(q, z)) cell.classList.add("blocked");
   });
   document.getElementById("score-p1").textContent = scores[0];
@@ -1629,54 +1435,35 @@ function render() {
 
 function highlightWin(cells) {
   document.querySelectorAll("#hex-grid .cell").forEach((el) => {
-    const q = +el.dataset.q,
-      z = +el.dataset.z;
+    const q = +el.dataset.q, z = +el.dataset.z;
     if (cells.some((c) => c.q === q && c.z === z)) el.classList.add("win-stone");
   });
 }
 
 function updateStatus() {
-  const dot = document.getElementById("turn-dot"),
-    label = document.getElementById("turn-label"),
-    indicator = document.getElementById("turn-indicator");
-  const msg = document.getElementById("msg");
-  
+  const dot = document.getElementById("turn-dot"), label = document.getElementById("turn-label"), indicator = document.getElementById("turn-indicator"), msg = document.getElementById("msg");
   dot.className = "stone-dot " + (currentPlayer === 1 ? "p1" : "p2");
   label.textContent = currentPlayer === 1 ? "홍의 차례" : "청의 차례";
   indicator.className = "turn-indicator " + (currentPlayer === 1 ? "black" : "white");
   
-  if (isDraw) {
-    msg.textContent = "무승부! (보드 가득 참)";
-    msg.className = "msg";
-  } else if (gameOver) {
-    msg.textContent = "게임 종료";
-    msg.className = "msg win";
-  } else if (captureMode && captureCandidates.length) {
-    msg.textContent = `제거할 돌 ${captureCandidates.length}개 중 하나를 클릭하세요! (Ctrl+Z로 무르기 가능)`;
-    msg.className = "msg alert";
-  } else if (aiThinking) {
-    msg.textContent = "AI 생각 중…";
-    msg.className = "msg";
-  } else if (modeEl.value === "ai")
-    msg.textContent =
-      currentPlayer === Number(sideEl.value) ? "내 차례" : "AI 차례";
+  if (isDraw) { msg.textContent = "무승부! (보드 가득 참)"; msg.className = "msg"; }
+  else if (gameOver) { msg.textContent = "게임 종료"; msg.className = "msg win"; }
+  else if (captureMode && captureCandidates.length) { msg.textContent = `제거할 돌 ${captureCandidates.length}개 중 하나를 클릭하세요! (Ctrl+Z로 무르기 가능)`; msg.className = "msg alert"; }
+  else if (aiThinking) { msg.textContent = "AI 생각 중…"; msg.className = "msg"; }
+  else if (modeEl.value === "ai") msg.textContent = currentPlayer === Number(sideEl.value) ? "내 차례" : "AI 차례";
   else msg.textContent = "";
 }
 
 /* ---------- 착수 / 제거 / 흐름 ---------- */
 function executeRemove(q, z) {
-  if (!captureMode || !captureCandidates.some((c) => c.q === q && c.z === z))
-    return;
+  if (!captureMode || !captureCandidates.some((c) => c.q === q && c.z === z)) return;
   setStone(q, z, 0);
   blockedCell = { q, z };
-  captureMode = false;
-  captureCandidates = [];
+  captureMode = false; captureCandidates = [];
   addLog("말 제거 → 상대방 차례입니다.");
   currentPlayer = other(currentPlayer);
-  render();
-  updateStatus();
-  if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value))
-    setTimeout(aiMove, 30);
+  render(); updateStatus();
+  if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value)) setTimeout(aiMove, 30);
 }
 
 function placeStone(q, z, p, isAI = false) {
@@ -1687,46 +1474,36 @@ function placeStone(q, z, p, isAI = false) {
   
   const win = checkWin(q, z, p);
   if (win) {
-    gameOver = true;
-    scores[p - 1]++;
-    render();
-    highlightWin(win);
+    gameOver = true; scores[p - 1]++;
+    render(); highlightWin(win);
     addLog(`${p === 1 ? "홍" : "청"} 승리!`);
-    updateStatus();
-    recordGameResult(p, history.length);
+    updateStatus(); recordGameResult(p, history.length);
     return;
   }
   
   const caps = findCaptures(q, z, p);
   if (caps.length) {
-    captureCandidates = caps;
-    captureMode = true;
+    captureCandidates = caps; captureMode = true;
     addLog(`샌드위치! ${caps.length}개 중 하나를 제거하세요.`);
-    render();
-    updateStatus();
+    render(); updateStatus();
     if (isAI)
       setTimeout(() => {
         const ep = gameEpoch;
-        const ch = chooseAIRemove(captureCandidates, p);
+        const ch = chooseAIRemove(captureCandidates, p, board); // 수정됨
         if (ep === gameEpoch && ch) executeRemove(ch.q, ch.z);
       }, 450);
     return;
   }
   
   if (board.size === CELLS.length) {
-    gameOver = true;
-    isDraw = true;
-    render();
-    addLog("무승부! 보드가 가득 찼습니다.");
-    updateStatus();
+    gameOver = true; isDraw = true; render();
+    addLog("무승부! 보드가 가득 찼습니다."); updateStatus();
     return;
   }
   
   currentPlayer = other(p);
-  render();
-  updateStatus();
-  if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value))
-    setTimeout(aiMove, 30);
+  render(); updateStatus();
+  if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value)) setTimeout(aiMove, 30);
 }
 
 function play(q, z) {
@@ -1738,14 +1515,8 @@ function play(q, z) {
     return;
   }
   if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value)) return;
-  if (getStone(q, z) !== 0) {
-    alert("이미 돌이 놓인 자리입니다.");
-    return;
-  }
-  if (isForbiddenToPlace(q, z)) {
-    alert("배치 금지 자리입니다. 다음 차례부터 놓을 수 있습니다.");
-    return;
-  }
+  if (getStone(q, z) !== 0) { alert("이미 돌이 놓인 자리입니다."); return; }
+  if (isForbiddenToPlace(q, z)) { alert("배치 금지 자리입니다. 다음 차례부터 놓을 수 있습니다."); return; }
   placeStone(q, z, currentPlayer, false);
 }
 
@@ -1753,137 +1524,65 @@ function aiMove() {
   if (gameOver || modeEl.value !== "ai" || captureMode) return;
   const ai = other(Number(sideEl.value));
   if (currentPlayer !== ai) return;
-  aiThinking = true;
-  updateStatus();
+  aiThinking = true; updateStatus();
   const ep = gameEpoch;
   setTimeout(() => {
-    if (ep !== gameEpoch) {
-      aiThinking = false;
-      return;
-    }
-    if (gameOver || currentPlayer !== ai || captureMode) {
-      aiThinking = false;
-      updateStatus();
-      return;
-    }
+    if (ep !== gameEpoch) { aiThinking = false; return; }
+    if (gameOver || currentPlayer !== ai || captureMode) { aiThinking = false; updateStatus(); return; }
     const choice = chooseAI(board, ai);
     aiThinking = false;
-    if (choice) placeStone(choice.q, choice.z, ai, true);
-    else updateStatus();
+    if (choice) placeStone(choice.q, choice.z, ai, true); else updateStatus();
   }, 30);
 }
 
 function newGame() {
-  gameEpoch++;
-  board = new Map();
-  currentPlayer = 1;
-  gameOver = false;
-  isDraw = false;
-  captureMode = false;
-  captureCandidates = [];
-  pendingGroups = [];
-  lastPlaced = null;
-  blockedCell = null;
-  history = [];
-  aiThinking = false;
-  TT.clear();
-  logEl.innerHTML = "";
-  addLog("게임 시작");
-  render();
-  updateStatus();
-  updateLearnUI();
-  if (modeEl.value === "ai" && Number(sideEl.value) === 2)
-    setTimeout(aiMove, 100);
+  gameEpoch++; board = new Map(); currentPlayer = 1; gameOver = false; isDraw = false;
+  captureMode = false; captureCandidates = []; pendingGroups = []; lastPlaced = null;
+  blockedCell = null; history = []; aiThinking = false; TT.clear(); logEl.innerHTML = "";
+  addLog("게임 시작"); render(); updateStatus(); updateLearnUI();
+  if (modeEl.value === "ai" && Number(sideEl.value) === 2) setTimeout(aiMove, 100);
 }
 
 function undo() {
   if (gameOver || aiThinking || !history.length) return;
-  
   if (captureMode) {
-    const s = history.pop();
-    restoreSnapshot(s);
-    TT.clear();
-    render();
-    updateStatus();
-    addLog("배치 취소 (한 수 무름)");
-    return;
+    const s = history.pop(); restoreSnapshot(s); TT.clear();
+    render(); updateStatus(); addLog("배치 취소 (한 수 무름)"); return;
   }
-  
   let n = modeEl.value === "ai" && history.length >= 2 ? 2 : 1;
   while (n-- && history.length) restoreSnapshot(history.pop());
-  TT.clear();
-  render();
-  updateStatus();
-  addLog("한 수 무름");
+  TT.clear(); render(); updateStatus(); addLog("한 수 무름");
 }
 
 async function resetLearnData() {
-  if (!currentIsAdmin()) {
-    alert("관리자만 AI 학습 데이터를 초기화할 수 있습니다.");
-    return;
-  }
-  if (
-    !confirm(
-      "모든 난이도의 AI 학습 데이터를 초기화할까요? 이 보드를 쓰는 모든 사람에게 적용됩니다."
-    )
-  )
-    return;
-  LEARN = defaultLearn();
-  await saveLearn();
-  updateLearnUI();
-  addLog("AI 학습 데이터 초기화됨");
+  if (!currentIsAdmin()) { alert("관리자만 AI 학습 데이터를 초기화할 수 있습니다."); return; }
+  if (!confirm("모든 난이도의 AI 학습 데이터를 초기화할까요? 이 보드를 쓰는 모든 사람에게 적용됩니다.")) return;
+  LEARN = defaultLearn(); await saveLearn(); updateLearnUI(); addLog("AI 학습 데이터 초기화됨");
 }
 
 function initBoardDOM() {
-  const grid = document.getElementById("hex-grid");
-  grid.innerHTML = "";
+  const grid = document.getElementById("hex-grid"); grid.innerHTML = "";
   for (let i = 0; i < WIDTHS.length; i++) {
-    const z = i - MID,
-      rowCells = CELLS.filter((c) => c.z === z).sort((a, b) => a.q - b.q);
-    const row = document.createElement("div");
-    row.className = "hex-row";
+    const z = i - MID, rowCells = CELLS.filter((c) => c.z === z).sort((a, b) => a.q - b.q);
+    const row = document.createElement("div"); row.className = "hex-row";
     for (const c of rowCells) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.q = c.q;
-      cell.dataset.z = c.z;
-      const inner = document.createElement("div");
-      inner.className = "cell-inner";
-      cell.appendChild(inner);
-      cell.addEventListener("click", () => play(c.q, c.z));
-      row.appendChild(cell);
+      const cell = document.createElement("div"); cell.className = "cell"; cell.dataset.q = c.q; cell.dataset.z = c.z;
+      const inner = document.createElement("div"); inner.className = "cell-inner"; cell.appendChild(inner);
+      cell.addEventListener("click", () => play(c.q, c.z)); row.appendChild(cell);
     }
     grid.appendChild(row);
   }
 }
 
-/* ---------- 단축키 / 버튼 ---------- */
-document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-    e.preventDefault();
-    undo();
-  }
-});
+document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); } });
 document.getElementById("btn-reset").onclick = newGame;
 document.getElementById("btn-undo").onclick = undo;
 document.getElementById("btn-reset-learn").onclick = resetLearnData;
-modeEl.onchange = newGame;
-sideEl.onchange = newGame;
-diffEl.onchange = () => {
-  newGame();
-  updateLearnUI();
-};
+modeEl.onchange = newGame; sideEl.onchange = newGame;
+diffEl.onchange = () => { newGame(); updateLearnUI(); };
 
-/* ---------- 시작 ---------- */
-initBoardDOM();
-renderAuth();
-const savedSession = getSession();
-if (savedSession) {
-  enterGame(savedSession);
-} else {
-  authScreen.style.display = "flex";
-  gameScreen.style.display = "none";
-}
+initBoardDOM(); renderAuth(); const savedSession = getSession();
+if (savedSession) { enterGame(savedSession); } else { authScreen.style.display = "flex"; gameScreen.style.display = "none"; }
 </script>
 </body>
 </html>
