@@ -959,12 +959,10 @@ function applyMoveNoRemove(b, q, z, p) {
   return { board: nb, caps: findCaptures(q, z, p, nb) };
 }
 
-// [수정] chooseAIRemove: AI가 샌드위치할 때 돌을 고르는 로직 향상
 function chooseAIRemove(candidates, me, bAfterMove) {
   const opp = other(me);
 
   // 1. (필승 콤보!) 내가 이 돌을 제거하고 다음 턴에 그 자리에 두면 이길 수 있는가?
-  // (상대는 1턴 배치 금지라 막을 수 없으므로 무조건 이김)
   for (const c of candidates) {
     const nb = cloneBoard(bAfterMove);
     setStone(c.q, c.z, 0, nb); // 제거 시뮬레이션
@@ -999,7 +997,7 @@ function applyMove(b, q, z, p) {
   const caps = findCaptures(q, z, p, nb);
   let removed = null;
   if (caps.length) {
-    removed = chooseAIRemove(caps, p, nb); // 보드 상태 같이 넘김
+    removed = chooseAIRemove(caps, p, nb); 
     setStone(removed.q, removed.z, 0, nb); 
   }
   return { board: nb, caps, removed };
@@ -1228,30 +1226,65 @@ function chooseAI(b, me) {
 
   const opp = other(me);
 
-  // --- 오프닝: "붙여두기" (선수/후수 상관없이, 방향도 상관없이 인접한 곳에 붙인다) ---
-  {
-    let myStones = 0, oppStones = 0;
-    let oppCell = null;
-    for (const c of CELLS) {
-      const st = getStone(c.q, c.z, b);
-      if (st === me) myStones++;
-      else if (st === opp) { oppStones++; oppCell = c; }
-    }
-    // 내가 게임의 첫 수: 중앙에 둔다
-    if (myStones === 0 && oppStones === 0) {
-      if (exists(0, 0) && getStone(0, 0, b) === 0) return { q: 0, z: 0 };
-      return moves[0];
-    }
-    // 상대가 이제 막 한 수 두었고 내 돌은 아직 없거나(내가 후수) 하나뿐인
-    // 상태(내가 선수라 먼저 두고 상대가 응수한 상태) 모두, 상대 돌에 바로 붙인다.
-    if (oppStones === 1 && myStones <= 1) {
-      for (const d of DIRS) {
-        const cand = { q: oppCell.q + d.dq, z: oppCell.z + d.dz };
-        if (exists(cand.q, cand.z) && getStone(cand.q, cand.z, b) === 0) return cand;
+  // --- [신규 완벽 통합] 오프닝 강제 착수 ---
+  let myStones = 0, oppStones = 0;
+  let oppCells = [], myCells = [];
+
+  for (const c of CELLS) {
+    const st = getStone(c.q, c.z, b);
+    if (st === me) { myStones++; myCells.push(c); }
+    else if (st === opp) { oppStones++; oppCells.push(c); }
+  }
+
+  // 1. 선공 첫 수: 중앙 차지
+  if (myStones === 0 && oppStones === 0) {
+    if (exists(0, 0) && getStone(0, 0, b) === 0) return { q: 0, z: 0 };
+    return moves[0];
+  }
+
+  // 2. 후공 첫 수: 상대 돌에 무조건 붙이기
+  if (myStones === 0 && oppStones === 1) {
+    const oppCell = oppCells[0];
+    const adjOffsets = [
+      { dq: 1, dz: 1 }, { dq: -1, dz: -1 },
+      { dq: -1, dz: 1 }, { dq: 1, dz: -1 },
+      { dq: 2, dz: 0 }, { dq: -2, dz: 0 }
+    ];
+    adjOffsets.sort(() => Math.random() - 0.5); // 방향 랜덤 섞기
+    for (const d of adjOffsets) {
+      const cand = { q: oppCell.q + d.dq, z: oppCell.z + d.dz };
+      if (exists(cand.q, cand.z) && getStone(cand.q, cand.z, b) === 0) {
+        return cand;
       }
     }
   }
 
+  // 3. AI의 두 번째 수 (선/후공 무관): 상대 돌 대각선에 두어서 V자(삼각형) 만들기
+  if (myStones === 1) {
+    const myFirst = myCells[0];
+    let targetOpp = null;
+    for (const oc of oppCells) {
+      if (hexDist(myFirst, oc) === 1) {
+        targetOpp = oc;
+        break;
+      }
+    }
+    if (!targetOpp) targetOpp = oppCells[0]; 
+
+    const diagOffsets = [
+      { dq: 1, dz: 1 }, { dq: -1, dz: -1 },
+      { dq: -1, dz: 1 }, { dq: 1, dz: -1 }
+    ];
+    diagOffsets.sort(() => Math.random() - 0.5);
+    for (const d of diagOffsets) {
+      const cand = { q: targetOpp.q + d.dq, z: targetOpp.z + d.dz };
+      if (exists(cand.q, cand.z) && getStone(cand.q, cand.z, b) === 0 && hexDist(cand, myFirst) <= 2) {
+        return cand;
+      }
+    }
+  }
+
+  // --- [필승 & 방어 전술] 샌드위치를 이용한 '배치 금지' 강제 5목 승리 ---
   // 1. 내 즉시 승리(5목) 확인
   for (const m of moves) {
     const nb = cloneBoard(b);
@@ -1259,17 +1292,17 @@ function chooseAI(b, me) {
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
 
-  // 2. [필승 전술] 샌드위치를 이용한 '배치 금지' 강제 5목 승리 
+  // 2. [공격] 샌드위치로 적 돌을 빼서 내가 5목을 낼 수 있는가? (3뛰고 1 등)
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     const caps = findCaptures(m.q, m.z, me, nb);
     for (const cap of caps) {
       const nb2 = cloneBoard(nb);
-      setStone(cap.q, cap.z, 0, nb2); // 상대 돌 제거 가정
-      setStone(cap.q, cap.z, me, nb2); // 그 자리에 내가 다음 턴에 둔다면?
+      setStone(cap.q, cap.z, 0, nb2); // 샌드위치로 돌 제거
+      setStone(cap.q, cap.z, me, nb2); // 상대는 배치 금지라 못 둠, 내가 다음 턴에 둠
       if (checkWin(cap.q, cap.z, me, nb2)) {
-        return m; // 상대는 이 자리에 둘 수 없으므로 무조건 나의 승리!
+        return m; // 확정 승리! 무조건 여기에 착수
       }
     }
   }
@@ -1281,7 +1314,7 @@ function chooseAI(b, me) {
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
 
-  // 4. [방어 전술] 상대의 '배치 금지' 강제 5목 승리 저지
+  // 4. [방어] 냅두면 상대가 나를 샌드위치해서 '배치 금지 5목 확정 승리'를 가져가는가?
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
@@ -1291,7 +1324,7 @@ function chooseAI(b, me) {
       setStone(cap.q, cap.z, 0, nb2);
       setStone(cap.q, cap.z, opp, nb2);
       if (checkWin(cap.q, cap.z, opp, nb2)) {
-        return m; // 냅두면 샌드위치 당하고 확정 패배하므로 무조건 막기!
+        return m; // 냅두면 내가 암살당하므로 무조건 막기!
       }
     }
   }
@@ -1489,7 +1522,7 @@ function placeStone(q, z, p, isAI = false) {
     if (isAI)
       setTimeout(() => {
         const ep = gameEpoch;
-        const ch = chooseAIRemove(captureCandidates, p, board); // 수정됨
+        const ch = chooseAIRemove(captureCandidates, p, board); 
         if (ep === gameEpoch && ch) executeRemove(ch.q, ch.z);
       }, 450);
     return;
