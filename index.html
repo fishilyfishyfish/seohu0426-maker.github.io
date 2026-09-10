@@ -595,7 +595,8 @@
     가로·세로·대각선(이 BOKU 보드의 3축)으로 자신의 말 5개 이상 연속 → 승리<br>
     내-적-적-내 → 가운데 2개 중 하나 선택 제거 / 돌을 놓은 것이 한 수이며 제거는 수가 아님<br>
     제거하자마자 무조건 상대 차례 / 제거된 자리는 상대방 딱 한 차례만 배치 금지<br>
-    그 다음부터는 다시 배치 가능 / 한 번 샌드위치한 돌은 영원히 다시 샌드위치 불가<br>
+    그 다음부터는 다시 배치 가능 / 이전에 샌드위치된 자리도 다시 샌드위치 가능<br>
+    보드의 모든 칸이 채워지면 무승부 처리됩니다.<br>
     사람 vs AI 대국 결과는 Firebase Realtime Database에 난이도별로 공유 학습됩니다.
   </div>
 
@@ -932,6 +933,7 @@ const TT = new Map();
 let board = new Map(),
   currentPlayer = 1,
   gameOver = false,
+  isDraw = false,
   captureMode = false;
 let captureCandidates = [],
   pendingGroups = [],
@@ -939,7 +941,6 @@ let captureCandidates = [],
   scores = [0, 0];
 let blockedCell = null,
   history = [],
-  usedSandwich = new Set(),
   aiThinking = false;
 let LEARN = null,
   learnReady = false,
@@ -992,8 +993,8 @@ function snapshot() {
     lastPlaced: lastPlaced ? { ...lastPlaced } : null,
     blockedCell: blockedCell ? { ...blockedCell } : null,
     scores: scores.slice(),
-    usedSandwich: new Set(usedSandwich),
     gameOver,
+    isDraw
   };
 }
 function restoreSnapshot(s) {
@@ -1005,8 +1006,8 @@ function restoreSnapshot(s) {
   lastPlaced = s.lastPlaced ? { ...s.lastPlaced } : null;
   blockedCell = s.blockedCell ? { ...s.blockedCell } : null;
   scores = s.scores ? s.scores.slice() : [0, 0];
-  usedSandwich = new Set(s.usedSandwich || []);
   gameOver = !!s.gameOver;
+  isDraw = !!s.isDraw;
   aiThinking = false;
 }
 
@@ -1051,10 +1052,8 @@ function findCaptures(q, z, player, b = board) {
       getStone(b2.q, b2.z, b) === opp &&
       getStone(c.q, c.z, b) === player
     ) {
-      const g = [];
-      if (!usedSandwich.has(key(a.q, a.z))) g.push(a);
-      if (!usedSandwich.has(key(b2.q, b2.z))) g.push(b2);
-      if (g.length) groups.push(g);
+      const g = [a, b2];
+      groups.push(g);
     }
   }
   const flat = [],
@@ -1076,7 +1075,6 @@ function applyMoveNoRemove(b, q, z, p) {
   return { board: nb, caps: findCaptures(q, z, p, nb) };
 }
 
-// [새 기능] 샌드위치 시 실제로 돌을 제거하여 판세를 시뮬레이션하는 함수
 function applyMove(b, q, z, p) {
   const nb = cloneBoard(b);
   setStone(q, z, p, nb);
@@ -1084,12 +1082,11 @@ function applyMove(b, q, z, p) {
   let removed = null;
   if (caps.length) {
     removed = chooseAIRemove(caps, p);
-    setStone(removed.q, removed.z, 0, nb); // 실제로 돌을 보드에서 제거
+    setStone(removed.q, removed.z, 0, nb); 
   }
   return { board: nb, caps, removed };
 }
 
-// [새 기능] 샌드위치 후 발생하는 형태 결함 및 '두기 싫은 자리' 페널티 계산
 function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
   if (!removed) return 0;
   const opp = other(p);
@@ -1105,7 +1102,6 @@ function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
       exists(mySide.q, mySide.z) && getStone(mySide.q, mySide.z, bAfterRemove) === p &&
       exists(oppCapSpot.q, oppCapSpot.z) && getStone(oppCapSpot.q, oppCapSpot.z, bAfterRemove) === 0
     ) {
-      // 뺀 자리가 상대 돌과 닿아있어 내가 두면 바로 역샌드위치를 당하는 악수 구멍
       defect += 50000;
     }
   }
@@ -1114,7 +1110,7 @@ function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
     if (getStone(c.q, c.z, bAfterRemove) === 0) {
       const oppCaps = findCaptures(c.q, c.z, opp, bAfterRemove);
       if (oppCaps.length > 0) {
-        defect += 80000; // 상대가 다음 수에 즉시 역샌드위치 가능
+        defect += 80000; 
         break;
       }
     }
@@ -1126,7 +1122,7 @@ function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
     if (exists(adj.q, adj.z) && getStone(adj.q, adj.z, bAfterRemove) === p) connectionCount++;
   }
   if (connectionCount === 0) {
-    defect += 25000; // 내 돌과의 연결이 끊긴 무리한 샌드위치
+    defect += 25000; 
   }
 
   return defect;
@@ -1257,7 +1253,6 @@ function boardKey(b) {
   return CELLS.map((c) => getStone(c.q, c.z, b)).join("");
 }
 
-// [수정 완료] minimax 함수 교체
 function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
   const term = terminalScore(b, me, ply);
   if (term !== null) return term;
@@ -1272,13 +1267,11 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
 
   let best = player === me ? -INF : INF;
   for (const m of moves.slice(0, cfg.cands)) {
-    // 실제 돌이 제거된 보드로 시뮬레이션
     const res = applyMove(b, m.q, m.z, player);
     const addCap = res.caps.length ? 1 : 0;
     const nM = capMe + (player === me ? addCap : 0);
     const nO = capOpp + (player !== me ? addCap : 0);
 
-    // 샌드위치 결함(두기 싫은 자리) 페널티 계산
     let defect = 0;
     if (res.removed) {
       defect = evaluateSandwichDefect(res.board, m, res.removed, player);
@@ -1296,7 +1289,6 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
       nO
     );
 
-    // 결함 페널티 적용
     if (player === me) {
       v -= defect;
       if (v > best) best = v;
@@ -1418,19 +1410,16 @@ function chooseAIRemove(candidates, me) {
   return best || candidates[0];
 }
 
-// [수정 완료] chooseAI 함수 교체
 function chooseAI(b, me) {
   let moves = prioritySortMoves(legalMoves(b), me, b);
   if (!moves.length) return null;
 
-  // 1. 내 즉시 승리(5목) 확인
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
 
-  // 2. 상대 즉시 승리(5목) 저지
   const opp = other(me);
   for (const m of moves) {
     const nb = cloneBoard(b);
@@ -1438,13 +1427,11 @@ function chooseAI(b, me) {
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
 
-  // 3. 상대 열린 3 저지
   const threats = findOpenThrees(b, opp),
     moveSet = new Set(moves.map((m) => key(m.q, m.z)));
   for (const t of threats)
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
 
-  // 4. 끊긴 3 저지
   const brokenThreats = findBrokenThrees(b, opp);
   for (const t of brokenThreats) {
     for (const m of moves) {
@@ -1647,19 +1634,25 @@ function highlightWin(cells) {
     if (cells.some((c) => c.q === q && c.z === z)) el.classList.add("win-stone");
   });
 }
+
 function updateStatus() {
   const dot = document.getElementById("turn-dot"),
     label = document.getElementById("turn-label"),
     indicator = document.getElementById("turn-indicator");
   const msg = document.getElementById("msg");
+  
   dot.className = "stone-dot " + (currentPlayer === 1 ? "p1" : "p2");
   label.textContent = currentPlayer === 1 ? "홍의 차례" : "청의 차례";
   indicator.className = "turn-indicator " + (currentPlayer === 1 ? "black" : "white");
-  if (gameOver) {
+  
+  if (isDraw) {
+    msg.textContent = "무승부! (보드 가득 참)";
+    msg.className = "msg";
+  } else if (gameOver) {
     msg.textContent = "게임 종료";
     msg.className = "msg win";
   } else if (captureMode && captureCandidates.length) {
-    msg.textContent = `제거할 돌 ${captureCandidates.length}개 중 하나를 클릭하세요!`;
+    msg.textContent = `제거할 돌 ${captureCandidates.length}개 중 하나를 클릭하세요! (Ctrl+Z로 무르기 가능)`;
     msg.className = "msg alert";
   } else if (aiThinking) {
     msg.textContent = "AI 생각 중…";
@@ -1675,8 +1668,6 @@ function executeRemove(q, z) {
   if (!captureMode || !captureCandidates.some((c) => c.q === q && c.z === z))
     return;
   setStone(q, z, 0);
-  scores[currentPlayer - 1]++;
-  usedSandwich.add(key(q, z));
   blockedCell = { q, z };
   captureMode = false;
   captureCandidates = [];
@@ -1693,6 +1684,7 @@ function placeStone(q, z, p, isAI = false) {
   blockedCell = null;
   setStone(q, z, p);
   lastPlaced = { q, z };
+  
   const win = checkWin(q, z, p);
   if (win) {
     gameOver = true;
@@ -1704,6 +1696,7 @@ function placeStone(q, z, p, isAI = false) {
     recordGameResult(p, history.length);
     return;
   }
+  
   const caps = findCaptures(q, z, p);
   if (caps.length) {
     captureCandidates = caps;
@@ -1719,6 +1712,16 @@ function placeStone(q, z, p, isAI = false) {
       }, 450);
     return;
   }
+  
+  if (board.size === CELLS.length) {
+    gameOver = true;
+    isDraw = true;
+    render();
+    addLog("무승부! 보드가 가득 찼습니다.");
+    updateStatus();
+    return;
+  }
+  
   currentPlayer = other(p);
   render();
   updateStatus();
@@ -1775,13 +1778,13 @@ function newGame() {
   board = new Map();
   currentPlayer = 1;
   gameOver = false;
+  isDraw = false;
   captureMode = false;
   captureCandidates = [];
   pendingGroups = [];
   lastPlaced = null;
   blockedCell = null;
   history = [];
-  usedSandwich = new Set();
   aiThinking = false;
   TT.clear();
   logEl.innerHTML = "";
@@ -1794,7 +1797,18 @@ function newGame() {
 }
 
 function undo() {
-  if (gameOver || aiThinking || captureMode || !history.length) return;
+  if (gameOver || aiThinking || !history.length) return;
+  
+  if (captureMode) {
+    const s = history.pop();
+    restoreSnapshot(s);
+    TT.clear();
+    render();
+    updateStatus();
+    addLog("배치 취소 (한 수 무름)");
+    return;
+  }
+  
   let n = modeEl.value === "ai" && history.length >= 2 ? 2 : 1;
   while (n-- && history.length) restoreSnapshot(history.pop());
   TT.clear();
