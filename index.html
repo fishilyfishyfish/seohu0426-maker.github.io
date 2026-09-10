@@ -485,7 +485,7 @@
 </head>
 <body>
 
-<!-- ============ 상단 유저바 (로그인 후 표시) ============ -->
+<!-- ============ 상단 유저바 ============ -->
 <div id="user-bar">
   <div class="user-chip">
     <span id="ub-name"></span>
@@ -512,15 +512,13 @@
       <input class="auth-input" id="auth-pw2" type="password" placeholder="비밀번호 확인">
       <div class="auth-error" id="auth-error" style="display:none;"></div>
       <p class="auth-note" id="auth-note">
-        처음 가입하는 계정은 자동으로 관리자가 됩니다. 관리자만 AI 학습 데이터를
-        초기화할 수 있고, 다른 계정을 관리자로 지정할 수 있습니다.
+        계정 정보는 실시간 데이터베이스에 안전하게 보관되어 다른 기기에서도 로그인할 수 있습니다.<br>
+        서버에 등록되는 최초의 계정이 자동으로 최고 관리자가 됩니다.
       </p>
       <button class="auth-submit" type="submit" id="auth-submit">가입하기</button>
       <button class="auth-switch" type="button" id="auth-switch">이미 계정이 있나요? 로그인</button>
     </form>
   </div>
-
-  <p class="auth-foot">계정 정보는 이 기기에만 저장됩니다.</p>
 </div>
 
 <!-- ============ 게임 화면 ============ -->
@@ -585,7 +583,7 @@
       </select>
     </label>
     <div style="padding:7px;border:1px solid var(--border);">
-      <div id="learnRecord">[내 기기] 0전 0승 0패</div>
+      <div id="learnRecord">[서버 연동] 0전 0승 0패</div>
       <div id="learnBias" style="margin-top:4px;">공+0.00 / 수+0.00</div>
     </div>
   </div>
@@ -619,22 +617,47 @@
 <script>
 "use strict";
 
-/* ============================================================
-   1) 인증 — 로컬 회원가입 / 로그인 / 관리자 지정
-   ============================================================ */
+const FIREBASE_DB_URL = "https://boku-d4eb3-default-rtdb.firebaseio.com";
 const USERS_KEY = "boku-users-v1";
 const SESSION_KEY = "boku-session-v1";
 
-function loadUsers() {
-  try {
-    const v = localStorage.getItem(USERS_KEY);
-    const p = v ? JSON.parse(v) : {};
-    return p && typeof p === "object" ? p : {};
-  } catch (e) { return {}; }
+/* ============================================================
+   1) 인증 — Firebase 서버 연동 유저 관리 시스템
+   ============================================================ */
+function loadUsersLocal() {
+  try { const v = localStorage.getItem(USERS_KEY); return v ? JSON.parse(v) : {}; } catch (e) { return {}; }
 }
-function saveUsers(u) {
+function saveUsersLocal(u) {
   try { localStorage.setItem(USERS_KEY, JSON.stringify(u)); } catch (e) {}
 }
+
+async function loadUsersRemote() {
+  try {
+    const r = await fetch(`${FIREBASE_DB_URL}/${USERS_KEY}.json`);
+    if (r.ok) {
+      const data = await r.json();
+      const users = data || {};
+      saveUsersLocal(users); // 로컬 캐싱
+      return users;
+    }
+  } catch (e) { console.error("Firebase load failed, using local DB", e); }
+  return loadUsersLocal();
+}
+
+async function saveUsersRemote(users) {
+  try {
+    const r = await fetch(`${FIREBASE_DB_URL}/${USERS_KEY}.json`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(users)
+    });
+    if (r.ok) {
+      saveUsersLocal(users);
+      return true;
+    }
+  } catch (e) {}
+  saveUsersLocal(users); // 통신 실패시 로컬에라도 저장
+  return false;
+}
+
 function hashPw(pw, salt) {
   let h = 5381;
   const s = salt + "::" + pw;
@@ -644,54 +667,58 @@ function hashPw(pw, salt) {
 function randomSalt() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-function signup(idRaw, pw, pw2) {
+
+async function signup(idRaw, pw, pw2) {
   const id = idRaw.trim();
   if (!id) return { ok: false, error: "아이디를 입력해주세요." };
   if (id.length < 2 || id.length > 16) return { ok: false, error: "아이디는 2자 이상 16자 이하로 해주세요." };
   if (!pw || pw.length < 4) return { ok: false, error: "비밀번호는 4자 이상으로 만들어주세요." };
   if (pw !== pw2) return { ok: false, error: "비밀번호가 서로 다릅니다." };
-  const users = loadUsers();
+  
+  const users = await loadUsersRemote();
   if (users[id]) return { ok: false, error: "이미 사용 중인 아이디입니다." };
+  
   const isFirst = Object.keys(users).length === 0; 
   const salt = randomSalt();
   users[id] = { hash: hashPw(pw, salt), salt, admin: isFirst, createdAt: Date.now() };
-  saveUsers(users);
+  
+  await saveUsersRemote(users);
   return { ok: true, userId: id, isAdmin: isFirst };
 }
-function login(idRaw, pw) {
+
+async function login(idRaw, pw) {
   const id = idRaw.trim();
-  const users = loadUsers();
+  const users = await loadUsersRemote();
   const u = users[id];
   if (!u || u.hash !== hashPw(pw, u.salt)) return { ok: false, error: "아이디 또는 비밀번호가 올바르지 않습니다." };
   return { ok: true, userId: id, isAdmin: u.admin };
 }
+
 function getSession() {
-  try {
-    const id = localStorage.getItem(SESSION_KEY);
-    if (!id) return null;
-    return loadUsers()[id] ? id : null;
-  } catch (e) { return null; }
+  try { return localStorage.getItem(SESSION_KEY); } catch (e) { return null; }
 }
 function setSession(id) {
-  try {
-    if (id) localStorage.setItem(SESSION_KEY, id);
-    else localStorage.removeItem(SESSION_KEY);
-  } catch (e) {}
+  try { if (id) localStorage.setItem(SESSION_KEY, id); else localStorage.removeItem(SESSION_KEY); } catch (e) {}
 }
-function setAdminFlag(actorId, targetId, admin) {
-  const users = loadUsers();
+
+async function setAdminFlag(actorId, targetId, admin) {
+  const users = await loadUsersRemote();
   if (!users[actorId] || !users[actorId].admin) return { error: "관리자만 변경할 수 있습니다." };
   if (targetId === actorId && !admin) return { error: "본인의 관리자 권한은 해제할 수 없습니다." };
   if (!users[targetId]) return { error: "존재하지 않는 계정입니다." };
+  
   users[targetId].admin = admin;
-  saveUsers(users);
+  await saveUsersRemote(users);
+  
+  if (targetId === currentUser) currentUserIsAdmin = admin;
   return { users };
 }
 
 let currentUser = null;
+let currentUserIsAdmin = false;
+
 function currentIsAdmin() {
-  const u = currentUser ? loadUsers()[currentUser] : null;
-  return !!(u && u.admin);
+  return currentUserIsAdmin;
 }
 
 const authScreen = document.getElementById("auth-screen");
@@ -714,16 +741,22 @@ function renderAuth() {
   authTitle.textContent = isSignup ? "회원가입" : "로그인";
   authDesc.textContent = isSignup ? "게임을 시작하려면 아이디와 비밀번호를 만들어주세요." : "가입한 계정으로 로그인해주세요.";
   authPw2.style.display = isSignup ? "" : "none";
-  authNote.style.display = isSignup ? "" : "none";
   authSubmit.textContent = isSignup ? "가입하기" : "로그인";
   authSwitch.textContent = isSignup ? "이미 계정이 있나요? 로그인" : "계정이 없나요? 회원가입";
   authPw2.value = "";
   authError.style.display = "none";
 }
 
-authForm.addEventListener("submit", (e) => {
+authForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const res = authTab === "signup" ? signup(authId.value, authPw.value, authPw2.value) : login(authId.value, authPw.value);
+  authSubmit.disabled = true;
+  authSubmit.textContent = "처리 중...";
+
+  const res = authTab === "signup" ? await signup(authId.value, authPw.value, authPw2.value) : await login(authId.value, authPw.value);
+  
+  authSubmit.disabled = false;
+  authSubmit.textContent = authTab === "signup" ? "가입하기" : "로그인";
+
   if (!res.ok) {
     authError.textContent = res.error;
     authError.style.display = "block";
@@ -731,6 +764,7 @@ authForm.addEventListener("submit", (e) => {
   }
   authPw.value = "";
   authPw2.value = "";
+  currentUserIsAdmin = res.isAdmin;
   enterGame(res.userId);
 });
 authSwitch.addEventListener("click", () => {
@@ -760,6 +794,7 @@ function enterGame(userId) {
 document.getElementById("btn-logout").addEventListener("click", () => {
   gameEpoch++; 
   currentUser = null;
+  currentUserIsAdmin = false;
   setSession(null);
   closeAdminPanel();
   document.getElementById("user-bar").style.display = "none";
@@ -769,8 +804,8 @@ document.getElementById("btn-logout").addEventListener("click", () => {
 });
 
 const adminOverlay = document.getElementById("admin-overlay");
-document.getElementById("btn-admin").addEventListener("click", () => {
-  renderAdminList();
+document.getElementById("btn-admin").addEventListener("click", async () => {
+  await renderAdminList();
   adminOverlay.classList.add("show");
 });
 document.getElementById("admin-close").addEventListener("click", closeAdminPanel);
@@ -778,9 +813,11 @@ adminOverlay.addEventListener("click", (e) => {
   if (e.target === adminOverlay) closeAdminPanel();
 });
 function closeAdminPanel() { adminOverlay.classList.remove("show"); }
-function renderAdminList() {
-  const users = loadUsers();
+
+async function renderAdminList() {
   const list = document.getElementById("admin-list");
+  list.innerHTML = "서버에서 목록을 불러오는 중...";
+  const users = await loadUsersRemote();
   list.innerHTML = "";
   Object.entries(users).sort((a, b) => a[1].createdAt - b[1].createdAt).forEach(([id, u]) => {
       const row = document.createElement("div");
@@ -807,17 +844,19 @@ function renderAdminList() {
           btn.disabled = true;
           btn.title = "본인의 관리자 권한은 해제할 수 없습니다.";
         }
-        btn.addEventListener("click", () => {
-          const r = setAdminFlag(currentUser, id, false);
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          const r = await setAdminFlag(currentUser, id, false);
           if (r.error) alert(r.error);
-          else { renderAdminList(); renderUserBar(); }
+          else { await renderAdminList(); renderUserBar(); }
         });
       } else {
         btn.textContent = "관리자로 지정";
-        btn.addEventListener("click", () => {
-          const r = setAdminFlag(currentUser, id, true);
+        btn.addEventListener("click", async () => {
+          btn.disabled = true;
+          const r = await setAdminFlag(currentUser, id, true);
           if (r.error) alert(r.error);
-          else renderAdminList();
+          else await renderAdminList();
         });
       }
       row.appendChild(who);
@@ -856,7 +895,6 @@ const AXIS_POS = [
   { dq: 2, dz: 0 }, { dq: 1, dz: 1 }, { dq: -1, dz: 1 },
 ];
 
-const FIREBASE_DB_URL = "https://boku-d4eb3-default-rtdb.firebaseio.com";
 const LEARN_KEY = "battle-ai-learn-v1";
 const LEARN_STEP = 0.04, LEARN_MAX = 0.6, MIN_MOVES_FOR_LEARNING = 14;
 
@@ -963,7 +1001,6 @@ function applyMoveNoRemove(b, q, z, p) {
 function chooseAIRemove(candidates, me, bAfterMove) {
   const opp = other(me);
 
-  // 1. (필승 콤보!) 내가 이 돌을 제거하고 다음 턴에 그 자리에 두면 이길 수 있는가?
   for (const c of candidates) {
     const nb = cloneBoard(bAfterMove);
     setStone(c.q, c.z, 0, nb); 
@@ -971,7 +1008,6 @@ function chooseAIRemove(candidates, me, bAfterMove) {
     if (checkWin(c.q, c.z, me, nb)) return c; 
   }
 
-  // 2. 이 돌을 제거해야 상대방의 다음 턴 5목 승리를 막을 수 있는가?
   for (const c of candidates) {
     const nb = cloneBoard(bAfterMove);
     setStone(c.q, c.z, opp, nb); 
@@ -1226,7 +1262,6 @@ function chooseAI(b, me) {
 
   const opp = other(me);
 
-  // --- 1. 오프닝 강제 착수 (선수/후수 강제) ---
   let myStones = 0, oppStones = 0;
   let oppCells = [], myCells = [];
 
@@ -1241,7 +1276,6 @@ function chooseAI(b, me) {
     return moves[0];
   }
 
-  // 후공 첫 수: 유저 돌 옆에 딱 붙이기
   if (myStones === 0 && oppStones === 1) {
     const oppCell = oppCells[0];
     const adjOffsets = [
@@ -1258,7 +1292,6 @@ function chooseAI(b, me) {
     }
   }
 
-  // 선/후공 무관 AI의 두 번째 수: 유저 돌 대각선에 두어서 V자/삼각형 형태 만들기
   if (myStones === 1) {
     const myFirst = myCells[0];
     let targetOpp = null;
@@ -1283,14 +1316,12 @@ function chooseAI(b, me) {
     }
   }
 
-  // --- 2. [필승] 내 즉시 승리(5목) 확인 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
 
-  // --- 3. [공격] 샌드위치 암살: 샌드위치로 적 돌 제거 후 '배치 금지'를 이용해 5목 승리 확정 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
@@ -1298,21 +1329,19 @@ function chooseAI(b, me) {
     for (const cap of caps) {
       const nb2 = cloneBoard(nb);
       setStone(cap.q, cap.z, 0, nb2); 
-      setStone(cap.q, cap.z, me, nb2); // 상대는 배치 금지라 못 둠, 고로 다음 내 턴에 여기에 둠
+      setStone(cap.q, cap.z, me, nb2); 
       if (checkWin(cap.q, cap.z, me, nb2)) {
-        return m; // 확정 승리! 무조건 여기에 착수
+        return m; 
       }
     }
   }
 
-  // --- 4. [방어] 상대 즉시 승리(5목) 저지 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
 
-  // --- 5. [방어] 상대 샌드위치 암살 저지 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
@@ -1322,17 +1351,15 @@ function chooseAI(b, me) {
       setStone(cap.q, cap.z, 0, nb2);
       setStone(cap.q, cap.z, opp, nb2);
       if (checkWin(cap.q, cap.z, opp, nb2)) {
-        return m; // 냅두면 암살당하므로 무조건 막기!
+        return m; 
       }
     }
   }
 
-  // --- 6. [방어] 상대 열린 3 저지 ---
   const threats = findOpenThrees(b, opp), moveSet = new Set(moves.map((m) => key(m.q, m.z)));
   for (const t of threats)
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
 
-  // --- 7. [방어] 상대 끊긴 3 (2뛰고 1 등) 저지 ---
   const brokenThreats = findBrokenThrees(b, opp);
   for (const t of brokenThreats) {
     for (const m of moves) {
@@ -1342,8 +1369,6 @@ function chooseAI(b, me) {
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
   }
 
-  // --- 8. [신규 공격 전술] 내 열린 3목, 끊긴 3목을 바로 4목으로 만들기 ---
-  // (상대의 치명적인 공격을 4번~7번 단계에서 모두 막아냈을 때만 실행)
   const myThreats = findOpenThrees(b, me);
   const myBrokenThreats = findBrokenThrees(b, me);
   let attackCands = [];
@@ -1351,7 +1376,6 @@ function chooseAI(b, me) {
   for (const t of myBrokenThreats) for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) attackCands.push(f);
 
   if (attackCands.length > 0) {
-    // 중복 제거
     const uniqueAttacks = [];
     const seenAttacks = new Set();
     for (const ac of attackCands) {
@@ -1359,7 +1383,6 @@ function chooseAI(b, me) {
       if (!seenAttacks.has(k)) { seenAttacks.add(k); uniqueAttacks.push(ac); }
     }
 
-    // 샌드위치 함정(역샌드위치 당하는 등)을 피하기 위해 최적의 공격수 선택 (결함 평가 적용)
     let bestAtt = uniqueAttacks[0];
     let bestAttVal = -INF;
     for (const am of uniqueAttacks) {
@@ -1375,7 +1398,6 @@ function chooseAI(b, me) {
     return bestAtt;
   }
 
-  // --- 9. 일반 Minimax 탐색 (위의 조건에 해당하지 않을 때 포석 쌓기) ---
   const turnCount = history.length + 1, cfg = DIFF[diffEl.value];
   const depth = turnCount <= 15 ? cfg.depthEarly : cfg.depthLate;
   let best = moves[0], bestVal = -INF;
@@ -1464,24 +1486,101 @@ function detectMissedBlock(winner) {
   }
   return false;
 }
+
 async function recordGameResult(winner, movesPlayed) {
   if (modeEl.value !== "ai" || !learnReady || !LEARN) return;
+  
   if (movesPlayed < MIN_MOVES_FOR_LEARNING) {
-    addLog(`판이 너무 짧게(${movesPlayed}수) 끝나 학습에는 반영하지 않았습니다.`); return;
+    addLog(`판이 너무 짧게(${movesPlayed}수) 끝나 학습에는 반영하지 않았습니다.`);
+    return;
   }
-  const human = Number(sideEl.value), ai = other(human);
+  
+  const human = Number(sideEl.value);
+  const ai = other(human);
+  
   if (winner === ai && detectMissedBlock(winner)) {
-    addLog("내가 열린 3을 막지 않아 진 판이라 학습에는 반영하지 않았습니다."); return;
+    addLog("내가 열린 3을 막지 않아 진 판이라 학습에는 반영하지 않았습니다.");
+    return;
   }
+
   const L = LEARN[diffEl.value];
   L.games++;
-  if (winner === ai) {
-    L.wins++; L.aggroAdj = Math.min(LEARN_MAX, L.aggroAdj + LEARN_STEP * 0.5); L.defenseAdj = Math.max(-LEARN_MAX, L.defenseAdj - LEARN_STEP * 0.25);
-  } else if (winner === human) {
-    L.losses++; L.defenseAdj = Math.min(LEARN_MAX, L.defenseAdj + LEARN_STEP); L.aggroAdj = Math.max(-LEARN_MAX, L.aggroAdj - LEARN_STEP * 0.3);
+  if (winner === ai) L.wins++;
+  else if (winner === human) L.losses++;
+
+  let aiSandwiches = 0, humanSandwiches = 0;
+  for (let i = 1; i < history.length; i++) {
+    if (history[i].board.size <= history[i-1].board.size) {
+      if (history[i-1].currentPlayer === ai) aiSandwiches++;
+      else humanSandwiches++;
+    }
   }
+  if (history.length > 0 && board.size <= history[history.length - 1].board.size) {
+    if (history[history.length - 1].currentPlayer === ai) aiSandwiches++;
+    else humanSandwiches++;
+  }
+
+  if (humanSandwiches > aiSandwiches) {
+    L.defenseAdj += (LEARN_STEP * 0.5) * (humanSandwiches - aiSandwiches);
+    L.aggroAdj -= (LEARN_STEP * 0.1);
+  } else if (aiSandwiches > humanSandwiches) {
+    L.aggroAdj += (LEARN_STEP * 0.5) * (aiSandwiches - humanSandwiches);
+  }
+
+  let aiMissedDefense = 0;
+  for (let i = 0; i < history.length - 1; i++) {
+    const snap = history[i];
+    if (snap.currentPlayer === ai) {
+      const currentB = snap.board;
+      const nextB = history[i+1].board;
+      let aiMove = null;
+      
+      for (const c of CELLS) {
+        if (!getStone(c.q, c.z, currentB) && getStone(c.q, c.z, nextB) === ai) {
+          aiMove = c; break;
+        }
+      }
+      if (!aiMove) continue;
+
+      const hThreats = findOpenThrees(currentB, human);
+      const hBroken = findBrokenThrees(currentB, human);
+      
+      if (hThreats.length > 0 || hBroken.length > 0) {
+        let blocked = false;
+        for (const t of hThreats) if (t.flanks.some(f => f.q === aiMove.q && f.z === aiMove.z)) blocked = true;
+        for (const t of hBroken) if (t.flanks.some(f => f.q === aiMove.q && f.z === aiMove.z)) blocked = true;
+        
+        if (!blocked) {
+          aiMissedDefense++;
+        }
+      }
+    }
+  }
+
+  if (aiMissedDefense > 0) {
+    L.defenseAdj += (LEARN_STEP * 0.8) * aiMissedDefense; 
+    L.aggroAdj -= LEARN_STEP * 0.3; 
+    addLog(`[AI 자아성찰] 상대의 전술각을 ${aiMissedDefense}번 놓쳐 수비력을 올립니다.`);
+  }
+
+  if (movesPlayed < 20) {
+    if (winner === ai) L.aggroAdj += LEARN_STEP * 0.8;
+    else if (winner === human) L.defenseAdj += LEARN_STEP * 1.5;
+  } else if (movesPlayed > 40) {
+    L.aggroAdj += LEARN_STEP * 0.2;
+    L.defenseAdj += LEARN_STEP * 0.2;
+  } else {
+    if (winner === ai) { L.aggroAdj += LEARN_STEP * 0.3; L.defenseAdj -= LEARN_STEP * 0.1; }
+    else if (winner === human) { L.defenseAdj += LEARN_STEP * 0.5; L.aggroAdj -= LEARN_STEP * 0.2; }
+  }
+
+  L.aggroAdj = Math.max(-LEARN_MAX, Math.min(LEARN_MAX * 2, L.aggroAdj));
+  L.defenseAdj = Math.max(-LEARN_MAX, Math.min(LEARN_MAX * 2, L.defenseAdj));
+
   await saveLearn();
   updateLearnUI();
+  
+  addLog(`[데이터 기록] 유저 샌드위치: ${humanSandwiches}회 / AI 샌드위치: ${aiSandwiches}회`);
 }
 
 /* ---------- 렌더 / 상태 ---------- */
@@ -1648,8 +1747,26 @@ document.getElementById("btn-reset-learn").onclick = resetLearnData;
 modeEl.onchange = newGame; sideEl.onchange = newGame;
 diffEl.onchange = () => { newGame(); updateLearnUI(); };
 
-initBoardDOM(); renderAuth(); const savedSession = getSession();
-if (savedSession) { enterGame(savedSession); } else { authScreen.style.display = "flex"; gameScreen.style.display = "none"; }
+async function initApp() {
+  initBoardDOM();
+  renderAuth();
+  const savedSession = getSession();
+  if (savedSession) {
+    const users = await loadUsersRemote();
+    if (users[savedSession]) {
+      currentUserIsAdmin = users[savedSession].admin;
+      enterGame(savedSession);
+    } else {
+      authScreen.style.display = "flex";
+      gameScreen.style.display = "none";
+    }
+  } else {
+    authScreen.style.display = "flex";
+    gameScreen.style.display = "none";
+  }
+}
+
+initApp();
 </script>
 </body>
 </html>
