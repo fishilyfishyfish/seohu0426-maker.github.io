@@ -859,11 +859,12 @@ const AXIS_POS = [
 const FIREBASE_DB_URL = "https://boku-d4eb3-default-rtdb.firebaseio.com";
 const LEARN_KEY = "battle-ai-learn-v1";
 const LEARN_STEP = 0.04, LEARN_MAX = 0.6, MIN_MOVES_FOR_LEARNING = 14;
+
 const DIFF = {
-  easy: { depthEarly: 2, depthLate: 1, cands: 6, aggro: 1.0, defense: 1.0 },
-  normal: { depthEarly: 3, depthLate: 2, cands: 8, aggro: 1.2, defense: 1.2 },
-  hard: { depthEarly: 5, depthLate: 4, cands: 10, aggro: 1.5, defense: 1.5 },
-  master: { depthEarly: 6, depthLate: 5, cands: 12, aggro: 1.8, defense: 1.8 },
+  easy: { depthEarly: 2, depthLate: 1, cands: 6, aggro: 1.5, defense: 1.0 },
+  normal: { depthEarly: 3, depthLate: 2, cands: 8, aggro: 1.8, defense: 1.2 },
+  hard: { depthEarly: 5, depthLate: 4, cands: 10, aggro: 2.2, defense: 1.5 },
+  master: { depthEarly: 6, depthLate: 5, cands: 12, aggro: 2.7, defense: 1.8 },
 };
 const PATTERN_SCORE = {
   "5": 10000000000, "4,2": 100000000, "4,1": 30000000, "4,0": 5000000,
@@ -965,19 +966,18 @@ function chooseAIRemove(candidates, me, bAfterMove) {
   // 1. (필승 콤보!) 내가 이 돌을 제거하고 다음 턴에 그 자리에 두면 이길 수 있는가?
   for (const c of candidates) {
     const nb = cloneBoard(bAfterMove);
-    setStone(c.q, c.z, 0, nb); // 제거 시뮬레이션
-    setStone(c.q, c.z, me, nb); // 내가 그 자리에 둔다고 가정
-    if (checkWin(c.q, c.z, me, nb)) return c; // 무조건 이거 제거!
+    setStone(c.q, c.z, 0, nb); 
+    setStone(c.q, c.z, me, nb); 
+    if (checkWin(c.q, c.z, me, nb)) return c; 
   }
 
   // 2. 이 돌을 제거해야 상대방의 다음 턴 5목 승리를 막을 수 있는가?
   for (const c of candidates) {
     const nb = cloneBoard(bAfterMove);
-    setStone(c.q, c.z, opp, nb); // 상대가 돌을 유지한다고 가정
-    if (checkWin(c.q, c.z, opp, nb)) return c; // 위험한 돌부터 제거!
+    setStone(c.q, c.z, opp, nb); 
+    if (checkWin(c.q, c.z, opp, nb)) return c; 
   }
 
-  // 3. 기존 휴리스틱 (중앙 쪽에 가깝고 다른 상대 돌과 붙어있는 것)
   let best = null, bestScore = -Infinity;
   for (const c of candidates) {
     let score = 0;
@@ -1082,7 +1082,7 @@ function prioritySortMoves(moves, me, b) {
         for (let i = 1; i <= 4; i++) {
           if (getStone(m.q + d.dq * i, m.z + d.dz * i, b) === me) adjMe++; else break;
         }
-        if (adjMe >= 2) score += 100; 
+        if (adjMe >= 2) score += 180; 
       }
       return { m, score };
     })
@@ -1226,7 +1226,7 @@ function chooseAI(b, me) {
 
   const opp = other(me);
 
-  // --- [신규 완벽 통합] 오프닝 강제 착수 ---
+  // --- 1. 오프닝 강제 착수 (선수/후수 강제) ---
   let myStones = 0, oppStones = 0;
   let oppCells = [], myCells = [];
 
@@ -1236,13 +1236,12 @@ function chooseAI(b, me) {
     else if (st === opp) { oppStones++; oppCells.push(c); }
   }
 
-  // 1. 선공 첫 수: 중앙 차지
   if (myStones === 0 && oppStones === 0) {
     if (exists(0, 0) && getStone(0, 0, b) === 0) return { q: 0, z: 0 };
     return moves[0];
   }
 
-  // 2. 후공 첫 수: 상대 돌에 무조건 붙이기
+  // 후공 첫 수: 유저 돌 옆에 딱 붙이기
   if (myStones === 0 && oppStones === 1) {
     const oppCell = oppCells[0];
     const adjOffsets = [
@@ -1250,7 +1249,7 @@ function chooseAI(b, me) {
       { dq: -1, dz: 1 }, { dq: 1, dz: -1 },
       { dq: 2, dz: 0 }, { dq: -2, dz: 0 }
     ];
-    adjOffsets.sort(() => Math.random() - 0.5); // 방향 랜덤 섞기
+    adjOffsets.sort(() => Math.random() - 0.5); 
     for (const d of adjOffsets) {
       const cand = { q: oppCell.q + d.dq, z: oppCell.z + d.dz };
       if (exists(cand.q, cand.z) && getStone(cand.q, cand.z, b) === 0) {
@@ -1259,7 +1258,7 @@ function chooseAI(b, me) {
     }
   }
 
-  // 3. AI의 두 번째 수 (선/후공 무관): 상대 돌 대각선에 두어서 V자(삼각형) 만들기
+  // 선/후공 무관 AI의 두 번째 수: 유저 돌 대각선에 두어서 V자/삼각형 형태 만들기
   if (myStones === 1) {
     const myFirst = myCells[0];
     let targetOpp = null;
@@ -1284,37 +1283,36 @@ function chooseAI(b, me) {
     }
   }
 
-  // --- [필승 & 방어 전술] 샌드위치를 이용한 '배치 금지' 강제 5목 승리 ---
-  // 1. 내 즉시 승리(5목) 확인
+  // --- 2. [필승] 내 즉시 승리(5목) 확인 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
 
-  // 2. [공격] 샌드위치로 적 돌을 빼서 내가 5목을 낼 수 있는가? (3뛰고 1 등)
+  // --- 3. [공격] 샌드위치 암살: 샌드위치로 적 돌 제거 후 '배치 금지'를 이용해 5목 승리 확정 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     const caps = findCaptures(m.q, m.z, me, nb);
     for (const cap of caps) {
       const nb2 = cloneBoard(nb);
-      setStone(cap.q, cap.z, 0, nb2); // 샌드위치로 돌 제거
-      setStone(cap.q, cap.z, me, nb2); // 상대는 배치 금지라 못 둠, 내가 다음 턴에 둠
+      setStone(cap.q, cap.z, 0, nb2); 
+      setStone(cap.q, cap.z, me, nb2); // 상대는 배치 금지라 못 둠, 고로 다음 내 턴에 여기에 둠
       if (checkWin(cap.q, cap.z, me, nb2)) {
         return m; // 확정 승리! 무조건 여기에 착수
       }
     }
   }
 
-  // 3. 상대 즉시 승리(5목) 저지
+  // --- 4. [방어] 상대 즉시 승리(5목) 저지 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
 
-  // 4. [방어] 냅두면 상대가 나를 샌드위치해서 '배치 금지 5목 확정 승리'를 가져가는가?
+  // --- 5. [방어] 상대 샌드위치 암살 저지 ---
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
@@ -1324,15 +1322,17 @@ function chooseAI(b, me) {
       setStone(cap.q, cap.z, 0, nb2);
       setStone(cap.q, cap.z, opp, nb2);
       if (checkWin(cap.q, cap.z, opp, nb2)) {
-        return m; // 냅두면 내가 암살당하므로 무조건 막기!
+        return m; // 냅두면 암살당하므로 무조건 막기!
       }
     }
   }
 
+  // --- 6. [방어] 상대 열린 3 저지 ---
   const threats = findOpenThrees(b, opp), moveSet = new Set(moves.map((m) => key(m.q, m.z)));
   for (const t of threats)
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
 
+  // --- 7. [방어] 상대 끊긴 3 (2뛰고 1 등) 저지 ---
   const brokenThreats = findBrokenThrees(b, opp);
   for (const t of brokenThreats) {
     for (const m of moves) {
@@ -1342,6 +1342,40 @@ function chooseAI(b, me) {
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
   }
 
+  // --- 8. [신규 공격 전술] 내 열린 3목, 끊긴 3목을 바로 4목으로 만들기 ---
+  // (상대의 치명적인 공격을 4번~7번 단계에서 모두 막아냈을 때만 실행)
+  const myThreats = findOpenThrees(b, me);
+  const myBrokenThreats = findBrokenThrees(b, me);
+  let attackCands = [];
+  for (const t of myThreats) for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) attackCands.push(f);
+  for (const t of myBrokenThreats) for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) attackCands.push(f);
+
+  if (attackCands.length > 0) {
+    // 중복 제거
+    const uniqueAttacks = [];
+    const seenAttacks = new Set();
+    for (const ac of attackCands) {
+      const k = key(ac.q, ac.z);
+      if (!seenAttacks.has(k)) { seenAttacks.add(k); uniqueAttacks.push(ac); }
+    }
+
+    // 샌드위치 함정(역샌드위치 당하는 등)을 피하기 위해 최적의 공격수 선택 (결함 평가 적용)
+    let bestAtt = uniqueAttacks[0];
+    let bestAttVal = -INF;
+    for (const am of uniqueAttacks) {
+      const res = applyMove(b, am.q, am.z, me);
+      let defect = 0;
+      if (res.removed) defect = evaluateSandwichDefect(res.board, am, res.removed, me);
+      const val = evaluate(res.board, me, res.caps.length ? 1 : 0, 0) - defect;
+      if (val > bestAttVal) {
+        bestAttVal = val;
+        bestAtt = am;
+      }
+    }
+    return bestAtt;
+  }
+
+  // --- 9. 일반 Minimax 탐색 (위의 조건에 해당하지 않을 때 포석 쌓기) ---
   const turnCount = history.length + 1, cfg = DIFF[diffEl.value];
   const depth = turnCount <= 15 ? cfg.depthEarly : cfg.depthLate;
   let best = moves[0], bestVal = -INF;
@@ -1363,7 +1397,7 @@ function effectiveCfg() {
   const L = LEARN[diffEl.value];
   return {
     ...base,
-    aggro: Math.max(0.5, Math.min(2.6, base.aggro + L.aggroAdj)),
+    aggro: Math.max(0.5, Math.min(3.5, base.aggro + L.aggroAdj)),
     defense: Math.max(0.5, Math.min(2.9, base.defense + L.defenseAdj)),
   };
 }
