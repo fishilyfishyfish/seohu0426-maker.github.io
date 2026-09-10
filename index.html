@@ -6,7 +6,7 @@
 <title>BOKU</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap');
- 
+
   :root {
     --bg: #1a1a1a;
     --surface: #222222;
@@ -22,9 +22,9 @@
     --win-glow: #6ec8a9;
     --cell-size: 58px;
   }
- 
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
- 
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -36,13 +36,13 @@
     padding: 24px 16px;
     gap: 20px;
   }
- 
+
   header {
     display: flex;
     align-items: baseline;
     gap: 12px;
   }
- 
+
   h1 {
     font-family: 'DM Mono', monospace;
     font-size: 2rem;
@@ -50,13 +50,13 @@
     letter-spacing: 0.3em;
     color: var(--accent);
   }
- 
+
   .subtitle {
     font-size: 0.75rem;
     color: var(--text-dim);
     letter-spacing: 0.1em;
   }
- 
+
   .status-bar {
     display: flex;
     align-items: center;
@@ -65,7 +65,7 @@
     font-size: 0.8rem;
     min-height: 36px;
   }
- 
+
   .turn-indicator {
     display: flex;
     align-items: center;
@@ -75,10 +75,10 @@
     border-radius: 2px;
     transition: border-color 0.2s;
   }
- 
+
   .turn-indicator.black { border-color: #555; }
   .turn-indicator.white { border-color: #999; }
- 
+
   .stone-dot {
     width: 14px;
     height: 14px;
@@ -87,10 +87,10 @@
   }
   .stone-dot.black { background: var(--red-stone); border: 1px solid #7a2520; }
   .stone-dot.white { background: var(--blue-stone); border: 1px solid #1e3d6e; }
- 
+
   .stone-dot.p1 { background: var(--red-stone); border: 2px solid #7a2520; }
   .stone-dot.p2 { background: var(--blue-stone); border: 2px solid #1e3d6e; }
- 
+
   .msg {
     font-size: 0.78rem;
     color: var(--text-dim);
@@ -98,19 +98,19 @@
   }
   .msg.alert { color: var(--capture-glow); }
   .msg.win { color: var(--win-glow); }
- 
+
   /* Board */
   .board-wrap {
     overflow-x: auto;
     padding: 8px;
     max-width: 100%;
   }
- 
+
   #board {
     position: relative;
     display: inline-block;
   }
- 
+
   .hex-grid {
     display: flex;
     flex-direction: column;
@@ -119,14 +119,14 @@
     z-index: 1;
     align-items: center;
   }
- 
+
   .hex-row {
     display: flex;
     justify-content: center;
     margin-top: calc(var(--cell-size) * -0.06);
   }
   .hex-row:first-child { margin-top: 0; }
- 
+
   .cell {
     width: var(--cell-size);
     height: calc(var(--cell-size) * 0.866);
@@ -137,7 +137,7 @@
     position: relative;
     flex-shrink: 0;
   }
- 
+
   .cell-inner {
     width: calc(var(--cell-size) * 0.7);
     height: calc(var(--cell-size) * 0.7);
@@ -148,48 +148,48 @@
     position: relative;
     z-index: 2;
   }
- 
+
   .cell:hover .cell-inner {
     border-color: var(--accent);
     transform: scale(1.12);
   }
- 
+
   .cell.has-stone .cell-inner {
     border: none;
   }
- 
+
   .cell.p1 .cell-inner {
     background: radial-gradient(circle at 35% 30%, var(--red-stone-hi), var(--red-stone) 70%);
     border: 1px solid #7a2520;
     box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
   }
- 
+
   .cell.p2 .cell-inner {
     background: radial-gradient(circle at 35% 30%, var(--blue-stone-hi), var(--blue-stone) 70%);
     border: 1px solid #1e3d6e;
     box-shadow: inset 0 1px 2px rgba(255,255,255,0.25), 0 2px 6px rgba(0,0,0,0.5);
   }
- 
+
   .cell.capture-choice .cell-inner {
     animation: glow-capture 1.4s ease-in-out infinite alternate;
     cursor: pointer;
   }
- 
+
   @keyframes glow-capture {
     from { box-shadow: 0 0 3px 1px rgba(224,92,58,0.4); }
     to   { box-shadow: 0 0 8px 2px rgba(224,92,58,0.9); }
   }
- 
+
   .cell.win-stone .cell-inner {
     box-shadow: 0 0 0 3px var(--win-glow);
   }
- 
+
   .cell.blocked .cell-inner {
     border-color: var(--capture-glow);
     opacity: 0.5;
     cursor: not-allowed;
   }
- 
+
   .cell.last-placed .cell-inner::after {
     content: '';
     position: absolute;
@@ -197,7 +197,7 @@
     border-radius: 50%;
     background: rgba(200,169,110,0.4);
   }
- 
+
   /* Controls */
   .controls {
     display: flex;
@@ -205,7 +205,7 @@
     flex-wrap: wrap;
     justify-content: center;
   }
- 
+
   button {
     font-family: 'DM Mono', monospace;
     font-size: 0.75rem;
@@ -218,17 +218,17 @@
     border-radius: 2px;
     transition: color 0.15s, border-color 0.15s;
   }
- 
+
   button:hover {
     color: var(--accent);
     border-color: var(--accent);
   }
- 
+
   #btn-reset-learn:hover {
     color: var(--capture-glow);
     border-color: var(--capture-glow);
   }
- 
+
   /* Score */
   .score-row {
     display: flex;
@@ -239,7 +239,7 @@
   }
   .score-item { display: flex; gap: 8px; align-items: center; }
   .score-item span:last-child { color: var(--text); font-size: 0.95rem; }
- 
+
   /* Screens */
   #auth-screen, #game-screen {
     display: flex;
@@ -249,7 +249,7 @@
   }
   #auth-screen { gap: 28px; justify-content: center; min-height: 80vh; }
   #game-screen { gap: 20px; }
- 
+
   /* ---------- User / admin bar ---------- */
   #user-bar {
     position: fixed;
@@ -262,7 +262,7 @@
     font-family: 'DM Mono', monospace;
     font-size: 0.72rem;
   }
- 
+
   .user-chip {
     display: flex;
     gap: 8px;
@@ -274,7 +274,7 @@
     color: var(--text);
     letter-spacing: 0.05em;
   }
- 
+
   .admin-badge {
     color: var(--accent);
     border: 1px solid #5a4b2e;
@@ -285,13 +285,13 @@
     letter-spacing: 0.12em;
     white-space: nowrap;
   }
- 
+
   #user-bar button {
     padding: 5px 12px;
     font-size: 0.68rem;
     background: rgba(26,26,26,0.9);
   }
- 
+
   /* ---------- Auth screen ---------- */
   .auth-card {
     background: var(--surface);
@@ -303,7 +303,7 @@
     flex-direction: column;
     gap: 14px;
   }
- 
+
   .auth-card h2 {
     font-family: 'DM Mono', monospace;
     font-weight: 300;
@@ -311,19 +311,19 @@
     letter-spacing: 0.25em;
     color: var(--text);
   }
- 
+
   .auth-desc {
     font-size: 0.75rem;
     color: var(--text-dim);
     line-height: 1.6;
   }
- 
+
   .auth-form {
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
- 
+
   .auth-input {
     width: 100%;
     padding: 9px 10px;
@@ -337,14 +337,14 @@
   }
   .auth-input:focus { outline: none; border-color: var(--accent); }
   .auth-input::placeholder { color: #555; }
- 
+
   .auth-error {
     font-family: 'DM Mono', monospace;
     font-size: 0.72rem;
     color: var(--capture-glow);
     line-height: 1.5;
   }
- 
+
   .auth-note {
     font-size: 0.68rem;
     color: var(--text-dim);
@@ -352,7 +352,7 @@
     border-left: 2px solid var(--accent);
     padding-left: 10px;
   }
- 
+
   .auth-card .auth-submit {
     color: var(--text);
     border-color: var(--accent);
@@ -360,21 +360,21 @@
     margin-top: 4px;
   }
   .auth-card .auth-submit:hover { color: var(--accent); }
- 
+
   .auth-card .auth-switch {
     border: none;
     font-size: 0.7rem;
     padding: 4px;
     align-self: center;
   }
- 
+
   .auth-foot {
     font-family: 'DM Mono', monospace;
     font-size: 0.66rem;
     color: #4c4c4c;
     letter-spacing: 0.06em;
   }
- 
+
   /* ---------- Overlay (관리자 지정) ---------- */
   .overlay {
     display: none;
@@ -387,7 +387,7 @@
     padding: 16px;
   }
   .overlay.show { display: flex; }
- 
+
   .overlay-box {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -400,7 +400,7 @@
     max-width: 420px;
     width: 100%;
   }
- 
+
   .overlay-box h2 {
     font-family: 'DM Mono', monospace;
     font-weight: 300;
@@ -408,13 +408,13 @@
     letter-spacing: 0.2em;
     color: var(--accent);
   }
- 
+
   .overlay-box .panel-desc {
     font-size: 0.75rem;
     color: var(--text-dim);
     line-height: 1.6;
   }
- 
+
   .admin-list {
     display: flex;
     flex-direction: column;
@@ -423,7 +423,7 @@
     overflow: auto;
     text-align: left;
   }
- 
+
   .admin-row {
     display: flex;
     align-items: center;
@@ -435,7 +435,7 @@
     font-size: 0.72rem;
     color: var(--text);
   }
- 
+
   .admin-row .who {
     display: flex;
     align-items: center;
@@ -445,19 +445,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
- 
+
   .admin-row .me-tag {
     color: var(--text-dim);
     font-size: 0.66rem;
     flex-shrink: 0;
   }
- 
+
   .admin-row button {
     padding: 4px 12px;
     font-size: 0.66rem;
     flex-shrink: 0;
   }
- 
+
   .admin-row button:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -466,12 +466,12 @@
     color: var(--text-dim);
     border-color: var(--border);
   }
- 
+
   .overlay-box .close-btn {
     align-self: center;
     padding: 8px 24px;
   }
- 
+
   @media (max-width: 640px) {
     :root { --cell-size: 33px; }
     #user-bar {
@@ -484,7 +484,7 @@
 </style>
 </head>
 <body>
- 
+
 <!-- ============ 상단 유저바 (로그인 후 표시) ============ -->
 <div id="user-bar">
   <div class="user-chip">
@@ -494,18 +494,18 @@
   <button id="btn-admin" style="display:none;" title="관리자 지정">관리자 지정</button>
   <button id="btn-logout" title="로그아웃">로그아웃</button>
 </div>
- 
+
 <!-- ============ 회원가입 / 로그인 화면 ============ -->
 <div id="auth-screen">
   <header>
     <h1>BOKU</h1>
     <span class="subtitle">로컬 2인 대전</span>
   </header>
- 
+
   <div class="auth-card">
     <h2 id="auth-title">회원가입</h2>
     <p class="auth-desc" id="auth-desc">게임을 시작하려면 아이디와 비밀번호를 만들어주세요.</p>
- 
+
     <form class="auth-form" id="auth-form">
       <input class="auth-input" id="auth-id" placeholder="아이디" autocomplete="username">
       <input class="auth-input" id="auth-pw" type="password" placeholder="비밀번호">
@@ -519,17 +519,17 @@
       <button class="auth-switch" type="button" id="auth-switch">이미 계정이 있나요? 로그인</button>
     </form>
   </div>
- 
+
   <p class="auth-foot">계정 정보는 이 기기에만 저장됩니다.</p>
 </div>
- 
+
 <!-- ============ 게임 화면 ============ -->
 <div id="game-screen" style="display:none;">
   <header>
     <h1>BOKU</h1>
     <span class="subtitle">로컬 2인 대전</span>
   </header>
- 
+
   <div class="score-row">
     <div class="score-item">
       <div class="stone-dot p1"></div>
@@ -542,7 +542,7 @@
       <span id="score-p2">0</span>
     </div>
   </div>
- 
+
   <div class="status-bar">
     <div class="turn-indicator" id="turn-indicator">
       <div class="stone-dot p1" id="turn-dot"></div>
@@ -550,19 +550,19 @@
     </div>
     <span class="msg" id="msg"></span>
   </div>
- 
+
   <div class="board-wrap">
     <div id="board">
       <div class="hex-grid" id="hex-grid"></div>
     </div>
   </div>
- 
+
   <div class="controls">
     <button id="btn-reset">새 게임</button>
     <button id="btn-undo">한 수 무르기</button>
     <button id="btn-reset-learn">AI 학습 데이터 초기화</button>
   </div>
- 
+
   <div style="width:min(760px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;font-family:'DM Mono',monospace;font-size:.72rem;">
     <label>게임 모드
       <select id="mode" style="width:100%;margin-top:4px;padding:7px;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:2px;">
@@ -589,19 +589,19 @@
       <div id="learnBias" style="margin-top:4px;">공+0.00 / 수+0.00</div>
     </div>
   </div>
- 
+
   <div id="rules-panel" style="width:min(760px,100%);font-size:.72rem;line-height:1.55;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;">
     <b style="color:var(--text);">더배틀 규칙 적용</b><br>
     가로·세로·대각선(이 BOKU 보드의 3축)으로 자신의 말 5개 이상 연속 → 승리<br>
-    내-적-적-내 → 가&#50868;데 2개 중 하나 선택 제거 / 돌을 놓은 것이 한 수이며 제거는 수가 아님<br>
+    내-적-적-내 → 가운데 2개 중 하나 선택 제거 / 돌을 놓은 것이 한 수이며 제거는 수가 아님<br>
     제거하자마자 무조건 상대 차례 / 제거된 자리는 상대방 딱 한 차례만 배치 금지<br>
     그 다음부터는 다시 배치 가능 / 한 번 샌드위치한 돌은 영원히 다시 샌드위치 불가<br>
     사람 vs AI 대국 결과는 Firebase Realtime Database에 난이도별로 공유 학습됩니다.
   </div>
- 
+
   <div id="game-log" style="width:min(760px,100%);height:120px;overflow:auto;background:var(--surface);border:1px solid var(--border);padding:8px;font-size:.68rem;line-height:1.5;color:var(--text-dim);"></div>
 </div>
- 
+
 <!-- ============ 관리자 지정 오버레이 ============ -->
 <div class="overlay" id="admin-overlay">
   <div class="overlay-box">
@@ -614,10 +614,10 @@
     <button class="close-btn" id="admin-close">닫기</button>
   </div>
 </div>
- 
+
 <script>
 "use strict";
- 
+
 /* ============================================================
    1) 인증 — 로컬 회원가입 / 로그인 / 관리자 지정
    계정 정보는 이 기기(localStorage)에만 저장됩니다.
@@ -625,7 +625,7 @@
    ============================================================ */
 const USERS_KEY = "boku-users-v1";
 const SESSION_KEY = "boku-session-v1";
- 
+
 function loadUsers() {
   try {
     const v = localStorage.getItem(USERS_KEY);
@@ -697,13 +697,13 @@ function setAdminFlag(actorId, targetId, admin) {
   saveUsers(users);
   return { users };
 }
- 
+
 let currentUser = null;
 function currentIsAdmin() {
   const u = currentUser ? loadUsers()[currentUser] : null;
   return !!(u && u.admin);
 }
- 
+
 /* ---------- 인증 화면 ---------- */
 const authScreen = document.getElementById("auth-screen");
 const gameScreen = document.getElementById("game-screen");
@@ -717,9 +717,9 @@ const authError = document.getElementById("auth-error");
 const authNote = document.getElementById("auth-note");
 const authSubmit = document.getElementById("auth-submit");
 const authSwitch = document.getElementById("auth-switch");
- 
+
 let authTab = "signup";
- 
+
 function renderAuth() {
   const isSignup = authTab === "signup";
   authTitle.textContent = isSignup ? "회원가입" : "로그인";
@@ -735,7 +735,7 @@ function renderAuth() {
   authPw2.value = "";
   authError.style.display = "none";
 }
- 
+
 authForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const res =
@@ -755,7 +755,7 @@ authSwitch.addEventListener("click", () => {
   authTab = authTab === "signup" ? "login" : "signup";
   renderAuth();
 });
- 
+
 /* ---------- 유저바 / 화면 전환 ---------- */
 function renderUserBar() {
   const admin = currentIsAdmin();
@@ -765,7 +765,7 @@ function renderUserBar() {
   document.getElementById("btn-reset-learn").style.display = admin ? "" : "none";
   document.getElementById("user-bar").style.display = "flex";
 }
- 
+
 function enterGame(userId) {
   currentUser = userId;
   setSession(userId);
@@ -775,7 +775,7 @@ function enterGame(userId) {
   newGame();
   loadLearn();
 }
- 
+
 document.getElementById("btn-logout").addEventListener("click", () => {
   gameEpoch++; // 진행 중이던 AI 타이머 무효화
   currentUser = null;
@@ -786,7 +786,7 @@ document.getElementById("btn-logout").addEventListener("click", () => {
   authScreen.style.display = "flex";
   renderAuth();
 });
- 
+
 /* ---------- 관리자 지정 패널 ---------- */
 const adminOverlay = document.getElementById("admin-overlay");
 document.getElementById("btn-admin").addEventListener("click", () => {
@@ -809,7 +809,7 @@ function renderAdminList() {
     .forEach(([id, u]) => {
       const row = document.createElement("div");
       row.className = "admin-row";
- 
+
       const who = document.createElement("span");
       who.className = "who";
       who.appendChild(document.createTextNode(id));
@@ -825,7 +825,7 @@ function renderAdminList() {
         me.textContent = "(나)";
         who.appendChild(me);
       }
- 
+
       const btn = document.createElement("button");
       if (u.admin) {
         btn.textContent = "관리자 해제";
@@ -849,17 +849,15 @@ function renderAdminList() {
           else renderAdminList();
         });
       }
- 
+
       row.appendChild(who);
       row.appendChild(btn);
       list.appendChild(row);
     });
 }
- 
+
 /* ============================================================
-   2) BOKU 게임 — 아래는 원본 로직 그대로
-   (예외: recordGameResult 의 열린 3 제외 조건과
-    resetLearnData 의 관리자 확인만 변경됨)
+   2) BOKU 게임
    ============================================================ */
 const WIDTHS = [5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5];
 const MID = 5;
@@ -881,7 +879,7 @@ for (let i = 0; i < WIDTHS.length; i++) {
 function exists(q, z) {
   return cellSet.has(key(q, z));
 }
- 
+
 // BOKU의 3축: 가로 + 두 대각선
 const DIRS = [
   { dq: 2, dz: 0 },
@@ -901,7 +899,7 @@ const AXIS_POS = [
   { dq: 1, dz: 1 },
   { dq: -1, dz: 1 },
 ];
- 
+
 const FIREBASE_DB_URL = "https://boku-d4eb3-default-rtdb.firebaseio.com";
 const LEARN_KEY = "battle-ai-learn-v1";
 const LEARN_STEP = 0.04,
@@ -930,7 +928,7 @@ const PATTERN_SCORE = {
 const INF = 1e14,
   MAX_TT = 50000;
 const TT = new Map();
- 
+
 let board = new Map(),
   currentPlayer = 1,
   gameOver = false,
@@ -947,12 +945,12 @@ let LEARN = null,
   learnReady = false,
   learnMode = "firebase";
 let gameEpoch = 0;
- 
+
 const modeEl = document.getElementById("mode");
 const diffEl = document.getElementById("difficulty");
 const sideEl = document.getElementById("side");
 const logEl = document.getElementById("game-log");
- 
+
 function other(p) {
   return p === 1 ? 2 : 1;
 }
@@ -970,7 +968,7 @@ function setStone(q, z, v, b = board) {
 function cloneBoard(b) {
   return new Map(b);
 }
- 
+
 function axial(q, z) {
   return { a: (q + z) / 2, b: z };
 }
@@ -983,7 +981,7 @@ function hexDist(a, b) {
     Math.abs(x.a - x.b - (y.a - y.b))
   );
 }
- 
+
 function snapshot() {
   return {
     board: cloneBoard(board),
@@ -1011,17 +1009,17 @@ function restoreSnapshot(s) {
   gameOver = !!s.gameOver;
   aiThinking = false;
 }
- 
+
 function addLog(txt) {
   if (!logEl) return;
   logEl.innerHTML += "▸ " + txt + "<br>";
   logEl.scrollTop = logEl.scrollHeight;
 }
- 
+
 function isForbiddenToPlace(q, z) {
   return blockedCell && blockedCell.q === q && blockedCell.z === z;
 }
- 
+
 function checkWin(q, z, player, b = board) {
   for (const [d1, d2] of AXES) {
     const line = [{ q, z }];
@@ -1037,8 +1035,7 @@ function checkWin(q, z, player, b = board) {
   }
   return null;
 }
- 
-// 더배틀의 "내-적-적-내" 규칙. 이미 샌드위치된 돌은 영구적으로 다시 제거 불가.
+
 function findCaptures(q, z, player, b = board) {
   const opp = other(player),
     groups = [];
@@ -1072,13 +1069,92 @@ function findCaptures(q, z, player, b = board) {
     }
   return flat;
 }
- 
+
 function applyMoveNoRemove(b, q, z, p) {
   const nb = cloneBoard(b);
   setStone(q, z, p, nb);
   return { board: nb, caps: findCaptures(q, z, p, nb) };
 }
- 
+
+// [새 기능] 샌드위치 시 실제로 돌을 제거하여 판세를 시뮬레이션하는 함수
+function applyMove(b, q, z, p) {
+  const nb = cloneBoard(b);
+  setStone(q, z, p, nb);
+  const caps = findCaptures(q, z, p, nb);
+  let removed = null;
+  if (caps.length) {
+    removed = chooseAIRemove(caps, p);
+    setStone(removed.q, removed.z, 0, nb); // 실제로 돌을 보드에서 제거
+  }
+  return { board: nb, caps, removed };
+}
+
+// [새 기능] 샌드위치 후 발생하는 형태 결함 및 '두기 싫은 자리' 페널티 계산
+function evaluateSandwichDefect(bAfterRemove, m, removed, p) {
+  if (!removed) return 0;
+  const opp = other(p);
+  let defect = 0;
+
+  for (const d of DIRS) {
+    const adjOpp = { q: removed.q + d.dq, z: removed.z + d.dz };
+    const mySide = { q: removed.q - d.dq, z: removed.z - d.dz };
+    const oppCapSpot = { q: removed.q - d.dq * 2, z: removed.z - d.dz * 2 };
+    
+    if (
+      exists(adjOpp.q, adjOpp.z) && getStone(adjOpp.q, adjOpp.z, bAfterRemove) === opp &&
+      exists(mySide.q, mySide.z) && getStone(mySide.q, mySide.z, bAfterRemove) === p &&
+      exists(oppCapSpot.q, oppCapSpot.z) && getStone(oppCapSpot.q, oppCapSpot.z, bAfterRemove) === 0
+    ) {
+      // 뺀 자리가 상대 돌과 닿아있어 내가 두면 바로 역샌드위치를 당하는 악수 구멍
+      defect += 50000;
+    }
+  }
+
+  for (const c of CELLS) {
+    if (getStone(c.q, c.z, bAfterRemove) === 0) {
+      const oppCaps = findCaptures(c.q, c.z, opp, bAfterRemove);
+      if (oppCaps.length > 0) {
+        defect += 80000; // 상대가 다음 수에 즉시 역샌드위치 가능
+        break;
+      }
+    }
+  }
+
+  let connectionCount = 0;
+  for (const d of DIRS) {
+    const adj = { q: m.q + d.dq, z: m.z + d.dz };
+    if (exists(adj.q, adj.z) && getStone(adj.q, adj.z, bAfterRemove) === p) connectionCount++;
+  }
+  if (connectionCount === 0) {
+    defect += 25000; // 내 돌과의 연결이 끊긴 무리한 샌드위치
+  }
+
+  return defect;
+}
+
+function isTrapCell(c, b, me) {
+  if (getStone(c.q, c.z, b) !== 0) return false;
+  const opp = other(me);
+  for (const d of DIRS) {
+    const neighbor = { q: c.q + d.dq, z: c.z + d.dz };
+    const anchor = { q: c.q + d.dq * 2, z: c.z + d.dz * 2 };
+    const capSpot = { q: c.q - d.dq, z: c.z - d.dz };
+    if (
+      !exists(neighbor.q, neighbor.z) ||
+      !exists(anchor.q, anchor.z) ||
+      !exists(capSpot.q, capSpot.z)
+    )
+      continue;
+    if (
+      getStone(neighbor.q, neighbor.z, b) === opp &&
+      getStone(anchor.q, anchor.z, b) === me &&
+      getStone(capSpot.q, capSpot.z, b) === 0
+    )
+      return true;
+  }
+  return false;
+}
+
 function legalMoves(b = board) {
   if (!b.size) return CELLS.slice();
   const set = new Set();
@@ -1100,22 +1176,35 @@ function legalMoves(b = board) {
     return { q, z };
   });
 }
- 
+
 function prioritySortMoves(moves, me, b) {
-  const turnCount = history.length + 1;
-  if (turnCount > 12) return moves;
-  return moves.slice().sort((A, B) => {
-    const a = Math.abs(A.q) + Math.abs(A.z),
-      bb = Math.abs(B.q) + Math.abs(B.z);
-    return a - bb;
-  });
+  if (!b.size) {
+    return moves.slice().sort((A, B) => {
+      const a = Math.abs(A.q) + Math.abs(A.z),
+        bb = Math.abs(B.q) + Math.abs(B.z);
+      return a - bb;
+    });
+  }
+  return moves
+    .map((m) => {
+      let density = 0;
+      for (const o of CELLS) if (getStone(o.q, o.z, b) && hexDist(m, o) <= 2) density++;
+      return { m, density };
+    })
+    .sort((x, y) => {
+      if (y.density !== x.density) return y.density - x.density;
+      const cx = Math.abs(x.m.q) + Math.abs(x.m.z),
+        cy = Math.abs(y.m.q) + Math.abs(y.m.z);
+      return cx - cy;
+    })
+    .map((x) => x.m);
 }
- 
+
 function patternScore(len, open) {
   if (len >= 5) return PATTERN_SCORE["5"];
   return PATTERN_SCORE[`${len},${open}`] || 0;
 }
- 
+
 function evaluate(b, me, capMe = 0, capOpp = 0) {
   const cfg = effectiveCfg(),
     aggro = cfg.aggro,
@@ -1138,17 +1227,23 @@ function evaluate(b, me, capMe = 0, capOpp = 0) {
           q += d.dq;
           z += d.dz;
         }
-        const open =
-          (exists(pr, pz) && getStone(pr, pz, b) === 0 ? 1 : 0) +
-          (exists(q, z) && getStone(q, z, b) === 0 ? 1 : 0);
-        score += sign * patternScore(len, open);
+        const preOpen = exists(pr, pz) && getStone(pr, pz, b) === 0;
+        const postOpen = exists(q, z) && getStone(q, z, b) === 0;
+        const open = (preOpen ? 1 : 0) + (postOpen ? 1 : 0);
+        const base = patternScore(len, open);
+        let trapEnds = 0;
+        if (len >= 2) {
+          if (preOpen && isTrapCell({ q: pr, z: pz }, b, p)) trapEnds++;
+          if (postOpen && isTrapCell({ q, z }, b, p)) trapEnds++;
+        }
+        score += sign * (base + trapEnds * base * 0.2);
       }
     }
   }
   score += (capMe - capOpp) * 50000;
   return score;
 }
- 
+
 function terminalScore(b, me, ply) {
   for (const c of CELLS) {
     const p = getStone(c.q, c.z, b);
@@ -1157,29 +1252,39 @@ function terminalScore(b, me, ply) {
   }
   return null;
 }
- 
+
 function boardKey(b) {
   return CELLS.map((c) => getStone(c.q, c.z, b)).join("");
 }
- 
+
+// [수정 완료] minimax 함수 교체
 function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
   const term = terminalScore(b, me, ply);
   if (term !== null) return term;
   if (depth <= 0) return evaluate(b, me, capMe, capOpp);
-  const k =
-    boardKey(b) + "|" + player + "|" + depth + "|" + capMe + "|" + capOpp;
+  const k = boardKey(b) + "|" + player + "|" + depth + "|" + capMe + "|" + capOpp;
   const cached = TT.get(k);
   if (cached !== undefined) return cached;
+
   let moves = prioritySortMoves(legalMoves(b), player, b);
   const cfg = DIFF[diffEl.value];
   if (!moves.length) return evaluate(b, me, capMe, capOpp);
+
   let best = player === me ? -INF : INF;
   for (const m of moves.slice(0, cfg.cands)) {
-    const res = applyMoveNoRemove(b, m.q, m.z, player);
+    // 실제 돌이 제거된 보드로 시뮬레이션
+    const res = applyMove(b, m.q, m.z, player);
     const addCap = res.caps.length ? 1 : 0;
-    const nM = capMe + (player === me ? addCap : 0),
-      nO = capOpp + (player !== me ? addCap : 0);
-    const v = minimax(
+    const nM = capMe + (player === me ? addCap : 0);
+    const nO = capOpp + (player !== me ? addCap : 0);
+
+    // 샌드위치 결함(두기 싫은 자리) 페널티 계산
+    let defect = 0;
+    if (res.removed) {
+      defect = evaluateSandwichDefect(res.board, m, res.removed, player);
+    }
+
+    let v = minimax(
       res.board,
       depth - 1,
       alpha,
@@ -1190,20 +1295,25 @@ function minimax(b, depth, alpha, beta, me, player, ply, capMe, capOpp) {
       nM,
       nO
     );
+
+    // 결함 페널티 적용
     if (player === me) {
+      v -= defect;
       if (v > best) best = v;
       if (best > alpha) alpha = best;
     } else {
+      v += defect;
       if (v < best) best = v;
       if (best < beta) beta = best;
     }
     if (beta <= alpha) break;
   }
+
   if (TT.size > MAX_TT) TT.delete(TT.keys().next().value);
   TT.set(k, best);
   return best;
 }
- 
+
 function findOpenThrees(b, p) {
   const threats = [],
     seen = new Set();
@@ -1243,7 +1353,44 @@ function findOpenThrees(b, p) {
   }
   return threats;
 }
- 
+
+function findBrokenThrees(b, p) {
+  const threats = [],
+    seen = new Set();
+  for (const start of CELLS) {
+    for (const d of AXIS_POS) {
+      const w = [0, 1, 2, 3].map((i) => ({
+        q: start.q + d.dq * i,
+        z: start.z + d.dz * i,
+      }));
+      if (!w.every((c) => exists(c.q, c.z))) continue;
+      const v = w.map((c) => getStone(c.q, c.z, b));
+      let gapIdx = -1;
+      if (v[0] === p && v[1] === 0 && v[2] === p && v[3] === p) gapIdx = 1;
+      else if (v[0] === p && v[1] === p && v[2] === 0 && v[3] === p) gapIdx = 2;
+      else continue;
+      const gap = w[gapIdx];
+      const stones = w.filter((_, i) => i !== gapIdx);
+      const before = { q: start.q - d.dq, z: start.z - d.dz };
+      const after = { q: w[3].q + d.dq, z: w[3].z + d.dz };
+      const beforeOpen = exists(before.q, before.z) && getStone(before.q, before.z, b) === 0;
+      const afterOpen = exists(after.q, after.z) && getStone(after.q, after.z, b) === 0;
+      if (!beforeOpen && !afterOpen) continue;
+      const k = w
+        .map((c) => key(c.q, c.z))
+        .sort()
+        .join("|");
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const flanks = [gap];
+      if (beforeOpen) flanks.push(before);
+      if (afterOpen) flanks.push(after);
+      threats.push({ flanks, stones });
+    }
+  }
+  return threats;
+}
+
 function chooseAIRemove(candidates, me) {
   const opp = other(me);
   let best = null,
@@ -1270,43 +1417,57 @@ function chooseAIRemove(candidates, me) {
   }
   return best || candidates[0];
 }
- 
+
+// [수정 완료] chooseAI 함수 교체
 function chooseAI(b, me) {
   let moves = prioritySortMoves(legalMoves(b), me, b);
   if (!moves.length) return null;
+
+  // 1. 내 즉시 승리(5목) 확인
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, me, nb);
     if (checkWin(m.q, m.z, me, nb)) return m;
   }
+
+  // 2. 상대 즉시 승리(5목) 저지
   const opp = other(me);
   for (const m of moves) {
     const nb = cloneBoard(b);
     setStone(m.q, m.z, opp, nb);
     if (checkWin(m.q, m.z, opp, nb)) return m;
   }
+
+  // 3. 상대 열린 3 저지
   const threats = findOpenThrees(b, opp),
     moveSet = new Set(moves.map((m) => key(m.q, m.z)));
   for (const t of threats)
     for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
-  let bestSand = null,
-    maxSand = 0;
-  for (const m of moves) {
-    const res = applyMoveNoRemove(b, m.q, m.z, me);
-    if (res.caps.length > maxSand) {
-      maxSand = res.caps.length;
-      bestSand = m;
+
+  // 4. 끊긴 3 저지
+  const brokenThreats = findBrokenThrees(b, opp);
+  for (const t of brokenThreats) {
+    for (const m of moves) {
+      const res = applyMoveNoRemove(b, m.q, m.z, me);
+      if (res.caps.some((c) => t.stones.some((s) => s.q === c.q && s.z === c.z)))
+        return m;
     }
+    for (const f of t.flanks) if (moveSet.has(key(f.q, f.z))) return f;
   }
-  if (bestSand) return bestSand;
+
   const turnCount = history.length + 1,
     cfg = DIFF[diffEl.value];
   const depth = turnCount <= 15 ? cfg.depthEarly : cfg.depthLate;
   let best = moves[0],
     bestVal = -INF;
   TT.clear();
+
   for (const m of moves.slice(0, cfg.cands)) {
-    const res = applyMoveNoRemove(b, m.q, m.z, me);
+    const res = applyMove(b, m.q, m.z, me);
+    let defect = 0;
+    if (res.removed) {
+      defect = evaluateSandwichDefect(res.board, m, res.removed, me);
+    }
     const v = minimax(
       res.board,
       depth - 1,
@@ -1315,9 +1476,10 @@ function chooseAI(b, me) {
       me,
       opp,
       1,
-      res.caps.length,
+      res.caps.length ? 1 : 0,
       0
-    );
+    ) - defect;
+
     if (v > bestVal) {
       bestVal = v;
       best = m;
@@ -1325,7 +1487,7 @@ function chooseAI(b, me) {
   }
   return best;
 }
- 
+
 function effectiveCfg() {
   const base = DIFF[diffEl.value];
   if (!learnReady || !LEARN) return base;
@@ -1336,8 +1498,8 @@ function effectiveCfg() {
     defense: Math.max(0.5, Math.min(2.9, base.defense + L.defenseAdj)),
   };
 }
- 
-/* ---------- 학습 데이터 저장소 (원본과 동일한 Firebase RTDB / 키) ---------- */
+
+/* ---------- 학습 데이터 저장소 ---------- */
 async function storageGet(key) {
   try {
     const r = await fetch(`${FIREBASE_DB_URL}/${encodeURIComponent(key)}.json`);
@@ -1407,7 +1569,7 @@ function updateLearnUI() {
     2
   )} / 수${L.defenseAdj >= 0 ? "+" : ""}${L.defenseAdj.toFixed(2)}`;
 }
- 
+
 function detectMissedBlock(winner) {
   const loser = other(winner);
   for (let i = 0; i < history.length; i++) {
@@ -1440,8 +1602,6 @@ async function recordGameResult(winner, movesPlayed) {
   }
   const human = Number(sideEl.value),
     ai = other(human);
-  // 유저가 열린 3을 못 막아 진 판(AI 승리)만 학습에서 제외.
-  // AI가 열린 3을 놓쳐 진 판(유저 승리)은 그대로 기록에 반영.
   if (winner === ai && detectMissedBlock(winner)) {
     addLog("내가 열린 3을 막지 않아 진 판이라 학습에는 반영하지 않았습니다.");
     return;
@@ -1460,7 +1620,7 @@ async function recordGameResult(winner, movesPlayed) {
   await saveLearn();
   updateLearnUI();
 }
- 
+
 /* ---------- 렌더 / 상태 ---------- */
 function render() {
   document.querySelectorAll("#hex-grid .cell").forEach((cell) => {
@@ -1479,7 +1639,7 @@ function render() {
   document.getElementById("score-p1").textContent = scores[0];
   document.getElementById("score-p2").textContent = scores[1];
 }
- 
+
 function highlightWin(cells) {
   document.querySelectorAll("#hex-grid .cell").forEach((el) => {
     const q = +el.dataset.q,
@@ -1509,7 +1669,7 @@ function updateStatus() {
       currentPlayer === Number(sideEl.value) ? "내 차례" : "AI 차례";
   else msg.textContent = "";
 }
- 
+
 /* ---------- 착수 / 제거 / 흐름 ---------- */
 function executeRemove(q, z) {
   if (!captureMode || !captureCandidates.some((c) => c.q === q && c.z === z))
@@ -1527,7 +1687,7 @@ function executeRemove(q, z) {
   if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value))
     setTimeout(aiMove, 30);
 }
- 
+
 function placeStone(q, z, p, isAI = false) {
   history.push(snapshot());
   blockedCell = null;
@@ -1565,7 +1725,7 @@ function placeStone(q, z, p, isAI = false) {
   if (modeEl.value === "ai" && currentPlayer !== Number(sideEl.value))
     setTimeout(aiMove, 30);
 }
- 
+
 function play(q, z) {
   if (gameOver || aiThinking) return;
   if (captureMode) {
@@ -1585,7 +1745,7 @@ function play(q, z) {
   }
   placeStone(q, z, currentPlayer, false);
 }
- 
+
 function aiMove() {
   if (gameOver || modeEl.value !== "ai" || captureMode) return;
   const ai = other(Number(sideEl.value));
@@ -1609,7 +1769,7 @@ function aiMove() {
     else updateStatus();
   }, 30);
 }
- 
+
 function newGame() {
   gameEpoch++;
   board = new Map();
@@ -1632,7 +1792,7 @@ function newGame() {
   if (modeEl.value === "ai" && Number(sideEl.value) === 2)
     setTimeout(aiMove, 100);
 }
- 
+
 function undo() {
   if (gameOver || aiThinking || captureMode || !history.length) return;
   let n = modeEl.value === "ai" && history.length >= 2 ? 2 : 1;
@@ -1642,8 +1802,7 @@ function undo() {
   updateStatus();
   addLog("한 수 무름");
 }
- 
-// 관리자 전용: AI 학습 데이터 초기화
+
 async function resetLearnData() {
   if (!currentIsAdmin()) {
     alert("관리자만 AI 학습 데이터를 초기화할 수 있습니다.");
@@ -1660,7 +1819,7 @@ async function resetLearnData() {
   updateLearnUI();
   addLog("AI 학습 데이터 초기화됨");
 }
- 
+
 function initBoardDOM() {
   const grid = document.getElementById("hex-grid");
   grid.innerHTML = "";
@@ -1683,7 +1842,7 @@ function initBoardDOM() {
     grid.appendChild(row);
   }
 }
- 
+
 /* ---------- 단축키 / 버튼 ---------- */
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
@@ -1700,8 +1859,8 @@ diffEl.onchange = () => {
   newGame();
   updateLearnUI();
 };
- 
-/* ---------- 시작: 세션 확인 후 게임 or 회원가입 화면 ---------- */
+
+/* ---------- 시작 ---------- */
 initBoardDOM();
 renderAuth();
 const savedSession = getSession();
@@ -1714,4 +1873,3 @@ if (savedSession) {
 </script>
 </body>
 </html>
- 
